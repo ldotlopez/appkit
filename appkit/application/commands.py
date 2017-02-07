@@ -66,7 +66,7 @@ class Manager:
             self.__class__.COMMAND_EXTENSION_POINT)
 
     def call_execute_method(self, command, arguments):
-        return command.execute(self, arguments)
+        return command.execute(self.app, arguments)
 
     def execute(self, *args):
         assert (isinstance(args, collections.Iterable))
