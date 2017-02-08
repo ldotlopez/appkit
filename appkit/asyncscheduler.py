@@ -21,7 +21,7 @@
 import asyncio
 import queue
 
-from ldotcommons import utils
+from appkit import types
 
 
 class AsyncScheduler:
@@ -32,7 +32,7 @@ class AsyncScheduler:
             loop = asyncio.get_event_loop()
 
         if logger is None:
-            logger = utils.NullSingleton()
+            logger = types.NullSingleton()
 
         self._logger = logger
 
