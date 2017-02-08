@@ -28,7 +28,6 @@ import queue
 import re
 import sys
 import time
-import urllib.parse
 import warnings
 
 import appdirs
@@ -323,30 +322,6 @@ class ObjectFactory:
             self._m[name] = getattr(sub_mod, cls_name)
 
         return self._m[name](*args, **kwargs)
-
-
-def url_strip_query_param(url, key):
-    p = urllib.parse.urlparse(url)
-    # urllib.parse.urllib.parse.parse_qs may return items in different order
-    # that original, so we avoid use it
-    qs = '&'.join(
-        [x for x in p.query.split('&') if not x.startswith(key + '=')])
-
-    return urllib.parse.ParseResult(
-        p.scheme,
-        p.netloc,
-        p.path,
-        p.params,
-        qs,
-        p.fragment).geturl()
-
-
-def url_get_query_param(url, key, default=None):
-    q = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
-    if key in q:
-        return q[key][-1]
-    else:
-        return default
 
 
 def prog_name(prog=sys.argv[0]):

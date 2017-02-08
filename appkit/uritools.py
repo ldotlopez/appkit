@@ -23,28 +23,35 @@ from urllib import parse
 
 
 def is_sha1_urn(urn):
-    """Check if urn matches sha1 urn: scheme
     """
-    assert isinstance(urn, str)
-    assert urn != ''
+    Check if urn matches sha1 urn: scheme
+    """
+    assert isinstance(urn, str) and urn
 
     return re.match('^urn:(.+?):[A-F0-9]{40}$', urn, re.IGNORECASE) is not None
 
 
 def is_base32_urn(urn):
-    """Check if urn matches base32 urn: scheme
     """
-    assert isinstance(urn, str)
-    assert urn != ''
+    Check if urn matches base32 urn: scheme
+    """
+    assert isinstance(urn, str) and urn
 
     return re.match('^urn:(.+?):[A-Z2-7]{32}$', urn, re.IGNORECASE) is not None
 
 
-def normalize(uri):
+def normalize(uri, default_protocol='http'):
+    """
+    Do some normalization on uri
+    """
     assert isinstance(uri, str) and uri
 
-    if '://' not in uri:
-        uri = 'http://' + uri
+    # Protocol relative URIs
+    if uri.startswith('//'):
+        uri = default_protocol + ':' + uri
+
+    elif uri.startswith('/'):
+        uri = 'file://' + uri
 
     parsed = parse.urlparse(uri)
     path, dummy = re.subn(r'/+', '/', parsed.path or '/')
@@ -53,31 +60,62 @@ def normalize(uri):
     return parse.urlunparse(parsed)
 
 
+def alter_query_param(uri, key, value):
+    """
+    Replace the value of key in the query string of uri
+    If key doesn't exists it's added
+    If value is None key it's deleted
+    """
+    assert isinstance(uri, str) and uri
+    assert isinstance(key, str) and uri
+    assert value is None or (isinstance(value, str))
+
+    parsed = parse.urlparse(uri)
+    tmp = parse.parse_qsl(parsed.query)
+
+    found = False
+
+    qsl = []
+    for (k, v) in tmp:
+        if k == key:
+            found = True
+            if value is None:
+                continue
+            v = value
+
+        if v is not None:
+            qsl.append((k, v))
+
+    if value and not found:
+        qsl.append((key, value))
+
+    return parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path,
+                             parsed.params,
+                             parse.urlencode(qsl, doseq=True),
+                             parsed.fragment))
+
+
 def paginate_by_query_param(uri, key, default=1):
     """
     Utility generator for easy pagination
     """
-    def alter_param(k, v):
-        if k == key:
-            try:
-                v = int(v) + 1
-            except ValueError:
-                v = default
 
-            v = str(v)
-
-        return k, v
-
-    yield uri
-
-    parsed = parse.urlparse(uri)
-    qsl = parse.parse_qsl(parsed.query)
-    if key not in [x[0] for x in qsl]:
-        qsl = qsl + [(key, default)]
+    assert isinstance(uri, str) and uri
+    assert isinstance(key, str) and key
+    assert isinstance(default, int)
 
     while True:
-        qsl = [alter_param(*x) for x in qsl]
-        yield parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path,
-                                parsed.params,
-                                parse.urlencode(qsl, doseq=True),
-                                parsed.fragment))
+        yield alter_query_param(uri, key, str(default))
+        default = default + 1
+
+
+def query_param(uri, key, default=None):
+    assert isinstance(uri, str) and uri
+    assert isinstance(key, str) and key
+    assert default is None or (isinstance(default, str) and default)
+
+    q = parse.parse_qs(parse.urlparse(uri).query)
+    if key in q:
+        return q[key][-1]
+    else:
+        return default
