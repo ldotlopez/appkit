@@ -21,12 +21,6 @@
 import inspect
 import importlib
 import re
-import warnings
-
-
-from appkit import (
-    types
-)
 
 
 class Extension:
