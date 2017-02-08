@@ -18,6 +18,8 @@
 # USA.
 
 
+"""Cache services"""
+
 import abc
 import hashlib
 import os
@@ -25,11 +27,16 @@ import pickle
 import shutil
 import tempfile
 import time
+from builtins import (
+    IOError as _IOError,
+    KeyError as _KeyError,
+    OSError as _OSError
+)
 
 
 def hashfunc(key):
     """
-    Default hash function for DiskCache.
+    Default hash function for appkit.cache.Disk
     Uses hex-encoded sha1 algorithm to hash keys.
     Parameters:
       key - key to `stringify`.
@@ -37,7 +44,7 @@ def hashfunc(key):
     return hashlib.sha1(key.encode('utf-8')).hexdigest()
 
 
-class AbstractCache:
+class Base:
     """
     Abstract base class for all appkit caches
     """
@@ -67,18 +74,18 @@ class AbstractCache:
         raise NotImplementedError()
 
 
-class NullCache(AbstractCache):
+class Null(Base):
     def get(self, key):
-        raise CacheMissError(key)
+        raise KeyMissError(key)
 
     def set(self, key, data):
         pass
 
 
-class DiskCache(AbstractCache):
+class Disk(Base):
     def __init__(self, basedir=None, delta=-1, hashfunc=hashfunc):
         """
-        DiskCache
+        Disk-based cache.
         Parameters:
           basedir - Root path for cache. Auxiliar cache files will be stored
                     under this path. If None is suplied then a temporal dir
@@ -113,59 +120,59 @@ class DiskCache(AbstractCache):
         try:
             s = os.stat(on_disk)
 
-        except (OSError, IOError) as e:
-            raise CacheMissError(key) from e
+        except (_OSError, _IOError) as e:
+            raise KeyMissError(key) from e
 
         delta = delta or self.delta
         if delta >= 0 and \
            (time.mktime(time.localtime()) - s.st_mtime > delta):
             os.unlink(on_disk)
-            raise CacheExpiredError(key)
+            raise KeyExpiredError(key)
 
         try:
             with open(on_disk, 'rb') as fh:
                 return pickle.loads(fh.read())
 
-        except IOError as e:
-            raise CacheIOError() from e
+        except _IOError as e:
+            raise IOError() from e
 
-        except OSError as e:
-            raise CacheOSError() from e
+        except _OSError as e:
+            raise OSError() from e
 
     def __del__(self):
         if self._is_tmp:
             shutil.rmtree(self.basedir)
 
 
-class CacheError(KeyError):
+class KeyError(_KeyError):
     """
     Base class for cache errors
     """
     pass
 
 
-class CacheMissError(CacheError):
+class KeyMissError(KeyError):
     """
     Requested key is missing in cache
     """
     pass
 
 
-class CacheExpiredError(CacheError):
+class KeyExpiredError(KeyError):
     """
     Requested key is expired in cache
     """
     pass
 
 
-class CacheIOError(IOError):
+class IOError(_IOError):
     """
     Cache error related to I/O errors
     """
     pass
 
 
-class CacheOSError(OSError):
+class OSError(_OSError):
     """
     Cache error related to OS errors
     """
