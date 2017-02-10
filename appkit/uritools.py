@@ -26,7 +26,10 @@ def is_sha1_urn(urn):
     """
     Check if urn matches sha1 urn: scheme
     """
-    assert isinstance(urn, str) and urn
+    if not isinstance(urn, str):
+        raise TypeError(urn)
+    if not urn:
+        raise ValueError(urn)
 
     return re.match('^urn:(.+?):[A-F0-9]{40}$', urn, re.IGNORECASE) is not None
 
@@ -35,7 +38,10 @@ def is_base32_urn(urn):
     """
     Check if urn matches base32 urn: scheme
     """
-    assert isinstance(urn, str) and urn
+    if not isinstance(urn, str):
+        raise TypeError(urn)
+    if not urn:
+        raise ValueError(urn)
 
     return re.match('^urn:(.+?):[A-Z2-7]{32}$', urn, re.IGNORECASE) is not None
 
