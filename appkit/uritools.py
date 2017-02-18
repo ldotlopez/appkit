@@ -43,12 +43,17 @@ def is_base32_urn(urn):
 def normalize(uri):
     assert isinstance(uri, str) and uri
 
-    if '://' not in uri:
-        uri = 'http://' + uri
-
     parsed = parse.urlparse(uri)
-    path, dummy = re.subn(r'/+', '/', parsed.path or '/')
-    parsed = parsed._replace(path=path)
+    if not parsed.scheme:
+        parsed._replace(scheme='http')
+
+    if parsed.scheme in ['http', 'https']:
+        # Path must be at least a single slash
+        path = parsed.path or '/'
+        # Remove multiple slashes
+        path, dummy = re.subn(r'/+', '/', path)
+        # Update url
+        parsed = parsed._replace(path=path)
 
     return parse.urlunparse(parsed)
 
