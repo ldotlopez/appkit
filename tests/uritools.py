@@ -19,14 +19,28 @@
 
 
 import unittest
+from appkit import uritools
 
 
-class TestMisc(unittest.TestCase):
-    def setUp(self):
-        pass
+class TestSha1(unittest.TestCase):
+    def test_is_sha1(self):
+        self.assertTrue(uritools.is_sha1_urn(
+            'urn:sha1:adc83b19e793491b1c6ea0fd8b46cd9f32e592fc'))
 
-    def tearDown(self):
-        pass
+    def test_base32_string(self):
+        self.assertFalse(uritools.is_sha1_urn(
+            'urn:sha1:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ'))
+
+    def test_wrong_type(self):
+        with self.assertRaises(TypeError):
+            uritools.is_sha1_urn(1)
+
+    def test_empty(self):
+        with self.assertRaises(ValueError):
+            uritools.is_sha1_urn('')
+
+    def test_random_string(self):
+        self.assertFalse(uritools.is_sha1_urn('test:random-string'))
 
 
 if __name__ == '__main__':
