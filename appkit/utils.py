@@ -22,7 +22,7 @@ import argparse
 import configparser
 import datetime
 import enum
-import importlib
+import functools
 import os
 import queue
 import re
@@ -31,6 +31,16 @@ import time
 import warnings
 
 import appdirs
+
+
+# Argument handling
+
+def argument(*args, **kwargs):
+    """argparse argument wrapper to ease the command argument definitions"""
+    def wrapped_arguments():
+        return args, kwargs
+
+    return wrapped_arguments
 
 
 class DictAction(argparse.Action):
@@ -53,275 +63,15 @@ class DictAction(argparse.Action):
         setattr(namespace, self.dest, dest)
 
 
-class InmutableDict(dict):
-    _msg = "'InmutableDict' object does not support operation"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._ = True
-
-    def pop(self, key):
-        if getattr(self, '_', False):
-            raise TypeError(self._msg)
-
-        super().pop(key)
-
-    def exclude(self, *keys):
-        return InmutableDict({k: v for (k, v) in self.items()
-                              if k not in keys})
-
-    def clear(self):
-        if getattr(self, '_', False):
-            raise TypeError(self._msg)
-
-        super().clear()
-
-    def __setitem__(self, key, value):
-        if getattr(self, '_', False):
-            raise TypeError(self._msg)
-
-        super().__setitem__(key, value)
-
-    def __delitem__(self, key):
-        if getattr(self, '_', False):
-            raise TypeError(self._msg)
-
-        super().__delitem__(key)
-
-
-class MultiDepthDict(dict):
-
-    def subdict(self,
-                prefix, strip_prefix=True, separator='.', merge_parent=False):
-        full_prefix = prefix + separator
-
-        return {k[len(full_prefix):] if strip_prefix else k: v
-                for (k, v) in self.items() if k.startswith(full_prefix)}
-
-
-class IterableQueue(queue.Queue):
-    def __iter__(self):
-        while True:
-            try:
-                x = self.get_nowait()
-                yield x
-            except queue.Empty:
-                break
-
-
-class ReadOnlyAttribute(Exception):
-    pass
-
-
-# class AttribDict(dict):
-#     RO = []
-#     GETTERS = []
-#     SETTERS = []
-
-#     def _setter(self, attr, value):
-#         try:
-#             return self.__setitem__(attr, value)
-#         except KeyError:
-#             raise AttributeError(attr)
-
-#     def _getter(self, attr):
-#         try:
-#             return self.__getitem__(attr)
-#         except KeyError:
-#             raise AttributeError(attr)
-
-#     def __getattr__(self, attr):
-#         if attr in self.__class__.GETTERS:
-#             return getattr(self, 'get_' + attr)()
-
-#         try:
-#             return super(AttribDict, self).__getitem__(attr)
-#         except KeyError:
-#             raise AttributeError(attr)
-
-#     def __setattr__(self, attr, value):
-#         if attr in self.__class__.RO:
-#             raise ReadOnlyAttribute()
-
-#         if attr in self.__class__.SETTERS:
-#             import ipdb; ipdb.set_trace()
-#             return getattr(self, 'set_' + attr)(value)()
-
-#         try:
-#             return super(AttribDict, self).__setitem__(attr, value)
-#         except KeyError:
-#             raise AttributeError(attr)
-
-#     def __setitem__(self, key, value):
-#         try:
-#             return self.__setattr__(key, value)
-#         except AttributeError:
-#             pass
-
-#         raise KeyError(key)
-
-#     def __getitem__(self, key):
-#         try:
-#             return self.__getattr__(key)
-#         except AttributeError:
-#             pass
-
-#         raise KeyError(key)
-
-class AttribDict(dict):
-    RO = []
-    GETTERS = []
-    SETTERS = []
-
-    def _setter(self, attr, value):
-        try:
-            return self.__setitem__(attr, value)
-        except KeyError:
-            raise AttributeError(attr)
-
-    def _getter(self, attr):
-        try:
-            return self.__getitem__(attr)
-        except KeyError:
-            raise AttributeError(attr)
-
-    def __getattr__(self, attr):
-        if attr in self.__class__.GETTERS:
-            return getattr(self, 'get_' + attr)()
-
-        try:
-            return super(AttribDict, self).__getitem__(attr)
-        except KeyError:
-            raise AttributeError(attr)
-
-    def __setattr__(self, attr, value):
-        if attr in self.__class__.RO:
-            raise ReadOnlyAttribute()
-
-        if attr in self.__class__.SETTERS:
-            return getattr(self, 'set_' + attr)(value)
-
-        try:
-            return super(AttribDict, self).__setitem__(attr, value)
-        except KeyError:
-            raise AttributeError(attr)
-
-
-class FactoryError(Exception):
-    pass
-
-
-class Factory:
-
-    def _to_clsname(self, name):
-        return ''.join([
-            x.capitalize() for x in self._to_modname(name).split('_')
-        ])
-
-    def _to_modname(self, name):
-        return name.replace('-', '_')
-
-    def __init__(self, ns):
-        self._ns = ns
-        self._mod = importlib.import_module(ns)
-        self._objs = {}
-
-    def __call__(self, name, *args, **kwargs):
-        if name not in self._objs:
-            cls = None
-
-            # Try loading class from internal mod
-            try:
-                cls = self._load_from_ns(name)
-            except AttributeError:
-                pass
-
-            # Try loading from submodule
-            if not cls:
-                try:
-                    cls = self._load_from_submod(name)
-                except (ImportError, AttributeError):
-                    pass
-
-            # Module not found
-            if not cls:
-                raise FactoryError(
-                    'Unable to load {} from namespace {}'.format(
-                        name, self._ns)
-                    )
-
-            # Create and save obj into cache
-            self._objs[name] = cls(*args, **kwargs)
-
-        return self._objs[name]
-
-    def _load_from_ns(self, name):
-        return getattr(self._mod, self._to_clsname(name))
-
-    def _load_from_submod(self, name):
-        m = importlib.import_module(
-            "{}.{}".format(self._ns, self._to_modname(name)))
-        return getattr(m, self._to_clsname(name))
-
-
-class ModuleFactory:
-    def __init__(self, ns):
-        self._ns = ns
-        self._ns_sym = importlib.import_module(ns)
-        self._m = {}
-
-    def __call__(self, name):
-        if name not in self._m:
-            if hasattr(self._ns_sym, name):
-                self._m[name] = getattr(self._ns_sym, name)
-
-            else:
-                try:
-                    self._m[name] = importlib.import_module(
-                        "{}.{}".format(self._ns, name))
-                except ImportError:
-                    pass
-
-        return self._m[name]
-
-
-class ObjectFactory:
-    def __init__(self, ns, in_sub_module=True):
-        self._ns = ns
-        self._ns_sym = importlib.import_module(ns)
-        self._m = {}
-        self._in_sub_module = in_sub_module
-
-    def __call__(self, name, *args, **kwargs):
-        if name not in self._m:
-            cls_name = ''.join([x.capitalize() for x in name.split('_')])
-
-            if not self._in_sub_module:
-                self._m[name] = getattr(self._ns_sym, cls_name)
-
-            else:
-                tmp = re.sub(r'([A-Z])', r'_\1', cls_name[1:])
-                tmp = cls_name[0] + tmp
-
-                sub_mod = None
-                sub_mod_exceptions = {}
-
-                for mod_candidate in [cls_name.lower(), tmp.lower()]:
-                    try:
-                        sub_mod = importlib.import_module("{}.{}".format(
-                            self._ns, mod_candidate))
-                        break
-
-                    except ImportError as e:
-                        sub_mod_exceptions[mod_candidate] = e
-                        pass
-
-                if not sub_mod:
-                    raise IndexError(sub_mod_exceptions)
-
-            self._m[name] = getattr(sub_mod, cls_name)
-
-        return self._m[name](*args, **kwargs)
+#
+# User paths
+#
+
+def prog_config_file(prog=None):
+    if prog is None:
+        prog = prog_name()
+
+    return user_path(UserPathType.CONFIG) + '.ini'
 
 
 def prog_name(prog=sys.argv[0]):
@@ -334,24 +84,6 @@ def prog_name(prog=sys.argv[0]):
         prog = ' '.join([x.capitalize() for x in re.split(r'[\-\s]+', prog)])
 
     return prog
-
-
-def prog_config_file(prog=None):
-    if prog is None:
-        prog = prog_name()
-
-    return user_path('config') + '.ini'
-
-
-def slugify(s, max_len=0, allowed_chars=r'a-zA-Z0-9\-\.'):
-    s = re.sub(r'[^' + allowed_chars + r']', '-', s)
-    return s[:max_len] if max_len > 0 else s
-
-
-class UserPathType(enum.Enum):
-    CONFIG = appdirs.user_config_dir
-    DATA = appdirs.user_data_dir
-    CACHE = appdirs.user_cache_dir
 
 
 def user_path(typ, name=None, prog=None, create=False, is_folder=None):
@@ -390,19 +122,15 @@ def user_path(typ, name=None, prog=None, create=False, is_folder=None):
     return ret
 
 
-def argument(*args, **kwargs):
-    """argparse argument wrapper to ease the command argument definitions"""
-    def wrapped_arguments():
-        return args, kwargs
-    return wrapped_arguments
+class UserPathType(enum.Enum):
+    CONFIG = appdirs.user_config_dir
+    DATA = appdirs.user_data_dir
+    CACHE = appdirs.user_cache_dir
 
 
-def shortify(s, length=50):
-    """
-    Returns a shortified version of s
-    """
-    return "…" + s[-(length - 1):] if len(s) > length else s
-
+#
+# datetime
+#
 
 def utcnow_timestamp():
     warnings.warn('Use ldotcommons.utils.now_timestamp(utc=True)')
@@ -413,6 +141,10 @@ def now_timestamp(utc=False):
     dt = datetime.datetime.utcnow() if utc else datetime.datetime.now()
     return int(time.mktime(dt.timetuple()))
 
+
+#
+# Configparser stuff
+#
 
 def configparser_to_dict(cp):
     return {section:
@@ -438,6 +170,10 @@ def ini_dump(d, path):
     cp.write(fh)
     fh.close()
 
+
+#
+# Different parsing functions
+#
 
 def parse_interval(string):
     _table = {
@@ -511,11 +247,19 @@ def parse_date(string):
     raise ValueError(string)
 
 
-def _import(obj):
-    mod = __import__(obj)
-    for o in obj.split('.')[1:]:
-        mod = getattr(mod, o)
-    return mod
+#
+# String manipulation
+#
+def slugify(s, max_len=0, allowed_chars=r'a-zA-Z0-9\-\.'):
+    s = re.sub(r'[^' + allowed_chars + r']', '-', s)
+    return s[:max_len] if max_len > 0 else s
+
+
+def shortify(s, length=50):
+    """
+    Returns a shortified version of s
+    """
+    return "…" + s[-(length - 1):] if len(s) > length else s
 
 
 def word_split(s):
@@ -538,6 +282,10 @@ def word_split(s):
             ret[idx] += c
 
 
+#
+# Iterators manipulation
+#
+
 def ichunks(it, size):
     """
     Generator function.
@@ -555,3 +303,33 @@ def ichunks(it, size):
                 return
 
         yield ret
+
+
+class IterableQueue(queue.Queue):
+    def __iter__(self):
+        while True:
+            try:
+                x = self.get_nowait()
+                yield x
+            except queue.Empty:
+                break
+
+
+#
+# Decorators
+#
+
+def generator_as_list(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        return [x for x in fn(*args, **kwargs)]
+
+    return wrapper
+
+
+def generator_as_dict(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        return {k: v for (k, v) in fn(*args, **kwargs)}
+
+    return wrapper
