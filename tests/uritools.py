@@ -22,26 +22,32 @@ import unittest
 from appkit import uritools
 
 
-class TestSha1(unittest.TestCase):
-    def test_is_sha1(self):
-        self.assertTrue(uritools.is_sha1_urn(
-            'urn:sha1:adc83b19e793491b1c6ea0fd8b46cd9f32e592fc'))
+class TestAlterQuery(unittest.TestCase):
+    def test_simple_replace(self):
+        self.assertEqual(uritools.alter_query_param(
+            'http://foo.com/?a=a', 'a', 'x'),
+            'http://foo.com/?a=x')
 
-    def test_base32_string(self):
-        self.assertFalse(uritools.is_sha1_urn(
-            'urn:sha1:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ'))
+    def test_add(self):
+        self.assertEqual(uritools.alter_query_param(
+            'http://foo.com/', 'a', 'x'),
+            'http://foo.com/?a=x')
 
-    def test_wrong_type(self):
-        with self.assertRaises(TypeError):
-            uritools.is_sha1_urn(1)
+    def test_remove(self):
+        self.assertEqual(uritools.alter_query_param(
+            'http://foo.com/?a=x', 'a', None),
+            'http://foo.com/')
 
-    def test_empty(self):
-        with self.assertRaises(ValueError):
-            uritools.is_sha1_urn('')
+    def test_keep_unset(self):
+        import ipdb; ipdb.set_trace(); pass
+        self.assertEqual(uritools.alter_query_param(
+            'http://foo.com/?a=x', 'a', None, keep_unset=True),
+            'http://foo.com/?a=')
 
-    def test_random_string(self):
-        self.assertFalse(uritools.is_sha1_urn('test:random-string'))
-
+    def test_reserved(self):
+        self.assertEqual(uritools.alter_query_param(
+            'http://foo.com/?a=#', 'a', 'x:x', safe=':'),
+            'http://foo.com/?a=x:x')
 
 if __name__ == '__main__':
     unittest.main()
