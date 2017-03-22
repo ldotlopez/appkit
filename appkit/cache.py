@@ -133,6 +133,10 @@ class Disk(Base):
             with open(on_disk, 'rb') as fh:
                 return pickle.loads(fh.read())
 
+        except EOFError as e:
+            os.unlink(on_disk)
+            raise KeyError(key) from e
+
         except _IOError as e:
             raise IOError() from e
 
