@@ -27,11 +27,6 @@ import pickle
 import shutil
 import tempfile
 import time
-from builtins import (
-    IOError as _IOError,
-    KeyError as _KeyError,
-    OSError as _OSError
-)
 
 
 def hashfunc(key):
@@ -44,7 +39,7 @@ def hashfunc(key):
     return hashlib.sha1(key.encode('utf-8')).hexdigest()
 
 
-class Base:
+class BaseCache:
     """
     Abstract base class for all appkit caches
     """
@@ -74,15 +69,15 @@ class Base:
         raise NotImplementedError()
 
 
-class Null(Base):
+class NullCache(BaseCache):
     def get(self, key):
-        raise KeyMissError(key)
+        raise CacheKeyMissError(key)
 
     def set(self, key, data):
         pass
 
 
-class Disk(Base):
+class DiskCache(BaseCache):
     def __init__(self, basedir=None, delta=-1, hashfunc=hashfunc):
         """
         Disk-based cache.
@@ -120,14 +115,14 @@ class Disk(Base):
         try:
             s = os.stat(on_disk)
 
-        except (_OSError, _IOError) as e:
-            raise KeyMissError(key) from e
+        except (OSError, IOError) as e:
+            raise CacheKeyMissError(key) from e
 
         delta = delta or self.delta
         if delta >= 0 and \
            (time.mktime(time.localtime()) - s.st_mtime > delta):
             os.unlink(on_disk)
-            raise KeyExpiredError(key)
+            raise CacheKeyExpiredError(key)
 
         try:
             with open(on_disk, 'rb') as fh:
@@ -135,48 +130,48 @@ class Disk(Base):
 
         except EOFError as e:
             os.unlink(on_disk)
-            raise KeyError(key) from e
+            raise CacheKeyError(key) from e
 
-        except _IOError as e:
-            raise IOError() from e
+        except IOError as e:
+            raise CacheIOError() from e
 
-        except _OSError as e:
-            raise OSError() from e
+        except OSError as e:
+            raise CacheOSError() from e
 
     def __del__(self):
         if self._is_tmp:
             shutil.rmtree(self.basedir)
 
 
-class KeyError(_KeyError):
+class CacheKeyError(KeyError):
     """
     Base class for cache errors
     """
     pass
 
 
-class KeyMissError(KeyError):
+class CacheKeyMissError(CacheKeyError):
     """
     Requested key is missing in cache
     """
     pass
 
 
-class KeyExpiredError(KeyError):
+class CacheKeyExpiredError(CacheKeyError):
     """
     Requested key is expired in cache
     """
     pass
 
 
-class IOError(_IOError):
+class CacheIOError(IOError):
     """
     Cache error related to I/O errors
     """
     pass
 
 
-class OSError(_OSError):
+class CacheOSError(OSError):
     """
     Cache error related to OS errors
     """
