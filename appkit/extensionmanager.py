@@ -153,11 +153,13 @@ class ExtensionManager:
         ext_name = extension_cls.__extension_name__
         for ext_point in extension_points:
             if ext_name in self._registry[ext_point]:
-                msg = ("Class {cls} can't be registered, name already "
+                msg = ("Class {cls} can't be registered."
+                       "Name '{name}' already "
                        "registered by {other}")
                 other = self._registry[ext_point][ext_name]
                 msg = msg.format(
                     cls=extension_cls.__name__,
+                    name=ext_name,
                     other=other.__name__)
                 raise ExtensionManagerError(msg)
 

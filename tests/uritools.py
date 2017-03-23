@@ -25,6 +25,7 @@ from appkit import (
 )
 
 
+<<<<<<< HEAD
 class TestAlterQuery(testtools.TestCaseWithSameURLMixin, unittest.TestCase):
     def test_simple(self):
         url1 = 'http://foo.com/?foo=bar'
@@ -89,6 +90,7 @@ class TestAlterQuery(testtools.TestCaseWithSameURLMixin, unittest.TestCase):
 
         self.assertSameURL(url2, newurl)
         self.assertTrue('urn:bthi:002' in newurl)
+
 
 if __name__ == '__main__':
     unittest.main()

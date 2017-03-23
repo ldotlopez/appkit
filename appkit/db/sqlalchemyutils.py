@@ -31,7 +31,7 @@ try:
     Base = declarative.declarative_base()
 except ImportError:
     import warnings
-    warnings.warn("sqlalchemy not available. Try pip install sqlalchemy")
+    warnings.warn("sqlalchemy not available. Try `pip install sqlalchemy`.")
     raise
 
 

@@ -18,39 +18,80 @@
 # USA.
 
 
-from appkit import types
+"""Cache services"""
 
+import abc
+import hashlib
 import os
 import pickle
 import shutil
 import tempfile
 import time
 
-from hashlib import sha1
-
 
 def hashfunc(key):
-    return sha1(key.encode('utf-8')).hexdigest()
+    """
+    Default hash function for appkit.cache.Disk
+    Uses hex-encoded sha1 algorithm to hash keys.
+    Parameters:
+      key - key to `stringify`.
+    """
+    return hashlib.sha1(key.encode('utf-8')).hexdigest()
 
 
-class NullCache:
+class BaseCache:
+    """
+    Abstract base class for all appkit caches
+    """
     def __init__(self, *args, **kwargs):
+        """
+        Initialization for Cache implemetations. This is a stub.
+        """
         pass
 
+    @abc.abstractmethod
     def get(self, key):
-        raise CacheMissError()
+        """
+        Returns the requested key from the cache.
+        Parameters:
+          key - Any hasheble object.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def set(self, key, value):
+        """
+        Stores value into cache associated with key.
+        Parameters:
+          key - Any hasheble object.
+          value - Value to store
+        """
+        raise NotImplementedError()
+
+
+class NullCache(BaseCache):
+    def get(self, key):
+        raise CacheKeyMissError(key)
 
     def set(self, key, data):
         pass
 
 
-class DiskCache:
-    def __init__(self, basedir=None, delta=-1, hashfunc=hashfunc,
-                 logger=None):
+class DiskCache(BaseCache):
+    def __init__(self, basedir=None, delta=-1, hashfunc=hashfunc):
+        """
+        Disk-based cache.
+        Parameters:
+          basedir - Root path for cache. Auxiliar cache files will be stored
+                    under this path. If None is suplied then a temporal dir
+                    will be used.
+          delta - Seconds needed before a entry is considered expired. Zero or
+                  negative values means that entries will never expire.
+          hashfun - A callable that will be use to transform keys into strings.
+        """
         self.basedir = basedir
         self.delta = delta
         self._is_tmp = False
-        self._logger = logger or types.NullSingleton()
 
         if not self.basedir:
             self.basedir = tempfile.mkdtemp()
@@ -65,9 +106,7 @@ class DiskCache:
         p = self._on_disk_path(key)
         dname = os.path.dirname(p)
 
-        if not os.path.exists(dname):
-            os.makedirs(dname)
-
+        os.makedirs(dname, exist_ok=True)
         with open(p, 'wb') as fh:
             fh.write(pickle.dumps(value))
 
@@ -77,49 +116,63 @@ class DiskCache:
             s = os.stat(on_disk)
 
         except (OSError, IOError) as e:
-            raise CacheMissError() from e
+            raise CacheKeyMissError(key) from e
 
         delta = delta or self.delta
         if delta >= 0 and \
            (time.mktime(time.localtime()) - s.st_mtime > delta):
-            msg = "Key «{key}» is outdated"
-            msg = msg.format(key=key)
-            self._logger.debug(msg)
             os.unlink(on_disk)
-
-            raise CacheMissError()
+            raise CacheKeyExpiredError(key)
 
         try:
             with open(on_disk, 'rb') as fh:
-                msg = "Found «{key}»: '{path}'"
-                msg = msg.format(key=key, path=on_disk)
-                self._logger.debug(msg)
-
                 return pickle.loads(fh.read())
 
-        except (IOError, OSError) as e:
-            msg = "Error accessing «{key}»: {reason}"
-            msg = msg.format(key=key, reason=str(e))
-            self._logger.error(msg)
+        except EOFError as e:
+            os.unlink(on_disk)
+            raise CacheKeyError(key) from e
 
-            raise CacheMissError() from e
+        except IOError as e:
+            raise CacheIOError() from e
+
+        except OSError as e:
+            raise CacheOSError() from e
 
     def __del__(self):
         if self._is_tmp:
             shutil.rmtree(self.basedir)
 
 
-class DeprecatedDiskCache(DiskCache):
-    def get(self, key):
-        try:
-            super().get(key)
-        except CacheMissError:
-            return None
-
-
-class CacheError(Exception):
+class CacheKeyError(KeyError):
+    """
+    Base class for cache errors
+    """
     pass
 
 
-class CacheMissError(CacheError):
+class CacheKeyMissError(CacheKeyError):
+    """
+    Requested key is missing in cache
+    """
+    pass
+
+
+class CacheKeyExpiredError(CacheKeyError):
+    """
+    Requested key is expired in cache
+    """
+    pass
+
+
+class CacheIOError(IOError):
+    """
+    Cache error related to I/O errors
+    """
+    pass
+
+
+class CacheOSError(OSError):
+    """
+    Cache error related to OS errors
+    """
     pass
