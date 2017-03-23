@@ -49,13 +49,13 @@ class SingletonMetaclass(type):
 # Types
 #
 
-# FIXME: Null[Singleton] -> RecursiveNull[Singleton]
+
 class Null:
     def __getattr__(self, attr):
-        return Null()
+        return self
 
     def __call__(self, *args, **kwargs):
-        return Null()
+        return self
 
 
 class NullSingleton(Null, metaclass=SingletonMetaclass):

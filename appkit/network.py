@@ -98,12 +98,10 @@ class UrllibFetcher(BaseFetcher):
 
         # Setup cache
         if enable_cache:
-            cache_path = utils.user_path(
-                'cache', 'urllibfetcher', create=True, is_folder=True)
-
-            self._cache = cache.DiskCache(
-                basedir=cache_path, delta=cache_delta,
-                logger=self._logger.getChild('cache'))
+            cache_path = utils.user_path('cache', 'urllibfetcher',
+                                         create=True, is_folder=True)
+            self._cache = cache.Disk(basedir=cache_path,
+                                     delta=cache_delta)
 
             msg = 'UrllibFetcher using cache {path}'
             msg = msg.format(path=cache_path)
@@ -162,16 +160,14 @@ class AIOHttpFetcher:
 
         # Setup cache
         if enable_cache:
-            cache_path = utils.user_path(
-                'cache', 'aiohttpfetcher', create=True, is_folder=True)
-
-            self._cache = cache.DiskCache(
-                basedir=cache_path, delta=cache_delta,
-                logger=self._logger.getChild('cache'))
-
+            cache_path = utils.user_path('cache', 'aiohttpfetcher',
+                                         create=True, is_folder=True)
+            self._cache = cache.DiskCache(basedir=cache_path,
+                                          delta=cache_delta)
             msg = 'AIOHttpFetcher using cache {path}'
             msg = msg.format(path=cache_path)
             self._logger.debug(msg)
+
         else:
             self._cache = cache.NullCache()
 
@@ -231,7 +227,7 @@ class AsyncFetcher:
             try:
                 buff = self._cache.get(url)
                 return None, buff
-            except cache.CacheMissError:
+            except cache.CacheKeyError:
                 pass
 
         with (yield from self._semaphore):

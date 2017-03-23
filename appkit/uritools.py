@@ -22,26 +22,18 @@ import re
 from urllib import parse
 
 
-def is_sha1_urn(urn):
-    """Check if urn matches sha1 urn: scheme
+def normalize(uri, default_protocol='http'):
     """
-    assert isinstance(urn, str)
-    assert urn != ''
-
-    return re.match('^urn:(.+?):[A-F0-9]{40}$', urn, re.IGNORECASE) is not None
-
-
-def is_base32_urn(urn):
-    """Check if urn matches base32 urn: scheme
+    Do some normalization on uri
     """
-    assert isinstance(urn, str)
-    assert urn != ''
-
-    return re.match('^urn:(.+?):[A-Z2-7]{32}$', urn, re.IGNORECASE) is not None
-
-
-def normalize(uri):
     assert isinstance(uri, str) and uri
+
+    # Protocol relative URIs
+    if uri.startswith('//'):
+        uri = default_protocol + ':' + uri
+
+    elif uri.startswith('/'):
+        uri = 'file://' + uri
 
     parsed = parse.urlparse(uri)
     if not parsed.scheme:
@@ -58,31 +50,46 @@ def normalize(uri):
     return parse.urlunparse(parsed)
 
 
+def alter_query_params(uri, params, **urlencode_kwargs):
+    urlencode_kwargs['doseq'] = urlencode_kwargs.get('doseq', True)
+
+    parsed = parse.urlparse(uri)
+
+    qs = parse.parse_qs(parsed.query)
+    for (param, value) in params.items():
+        if value is None:
+            try:
+                del(qs[param])
+            except KeyError:
+                continue
+
+        else:
+            qs[param] = value
+
+    return parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path or '/',
+                             parsed.params,
+                             parse.urlencode(qs, **urlencode_kwargs),
+                             parsed.fragment))
+
+
 def paginate_by_query_param(uri, key, default=1):
     """
     Utility generator for easy pagination
     """
-    def alter_param(k, v):
-        if k == key:
-            try:
-                v = int(v) + 1
-            except ValueError:
-                v = default
 
-            v = str(v)
-
-        return k, v
-
-    yield uri
-
-    parsed = parse.urlparse(uri)
-    qsl = parse.parse_qsl(parsed.query)
-    if key not in [x[0] for x in qsl]:
-        qsl = qsl + [(key, default)]
+    try:
+        current = int(query_param(uri, key, default))
+    except ValueError:
+        current = default
 
     while True:
-        qsl = [alter_param(*x) for x in qsl]
-        yield parse.urlunparse((parsed.scheme, parsed.netloc, parsed.path,
-                                parsed.params,
-                                parse.urlencode(qsl, doseq=True),
-                                parsed.fragment))
+        yield alter_query_params(uri, {key: current})
+        current = current + 1
+
+
+def query_param(uri, key, default=None):
+    q = parse.parse_qs(parse.urlparse(uri).query)
+    try:
+        return q[key][-1]
+    except KeyError:
+        return default
