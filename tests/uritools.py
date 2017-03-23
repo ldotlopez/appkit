@@ -19,29 +19,76 @@
 
 
 import unittest
-from appkit import uritools
+from appkit import (
+    testtools,
+    uritools
+)
 
 
-class TestSha1(unittest.TestCase):
-    def test_is_sha1(self):
-        self.assertTrue(uritools.is_sha1_urn(
-            'urn:sha1:adc83b19e793491b1c6ea0fd8b46cd9f32e592fc'))
+class TestAlterQuery(testtools.TestCaseWithSameURLMixin, unittest.TestCase):
+    def test_simple(self):
+        url1 = 'http://foo.com/?foo=bar'
+        url2 = 'http://foo.com/?foo=x'
 
-    def test_base32_string(self):
-        self.assertFalse(uritools.is_sha1_urn(
-            'urn:sha1:SQ5HALIG6NCZTLXB7DNI56PXFFQDDVUZ'))
+        self.assertSameURL(
+            uritools.alter_query_params(url1, dict(foo='x')),
+            url2)
 
-    def test_wrong_type(self):
-        with self.assertRaises(TypeError):
-            uritools.is_sha1_urn(1)
+    def test_add(self):
+        url1 = 'http://foo.com/'
+        url2 = 'http://foo.com/?foo=x'
 
-    def test_empty(self):
-        with self.assertRaises(ValueError):
-            uritools.is_sha1_urn('')
+        self.assertSameURL(
+            uritools.alter_query_params(url1, dict(foo='x')),
+            url2)
 
-    def test_random_string(self):
-        self.assertFalse(uritools.is_sha1_urn('test:random-string'))
+    def test_del(self):
+        url1 = 'http://foo.com/?foo=x&bar=y'
+        url2 = 'http://foo.com/?foo=x'
 
+        self.assertSameURL(
+            uritools.alter_query_params(url1, dict(bar=None)),
+            url2)
+
+    def test_multiple_to_single(self):
+        url1 = 'http://foo.com/?foo=x&foo=y'
+        url2 = 'http://foo.com/?foo=x'
+
+        self.assertSameURL(
+            uritools.alter_query_params(url1, dict(foo='x')),
+            url2)
+
+    def test_multiple_to_other_mult(self):
+        url1 = 'http://foo.com/?foo=x&foo=y'
+        url2 = 'http://foo.com/?foo=a&foo=b&foo=c'
+
+        self.assertSameURL(
+            uritools.alter_query_params(url1, dict(foo=['a', 'b', 'c'])),
+            url2)
+
+    def test_multiple_to_none(self):
+        url1 = 'http://foo.com/?foo=x&foo=y'
+        url2 = 'http://foo.com/'
+
+        self.assertSameURL(
+            uritools.alter_query_params(url1, dict(foo=None)),
+            url2)
+
+    def test_modify_single_skip_multiple(self):
+        url1 = 'http://foo.com/?foo=x&foo=y&bar=a'
+        url2 = 'http://foo.com/?foo=x&bar=b&foo=y'
+
+        self.assertSameURL(
+            uritools.alter_query_params(url1, dict(bar='b')),
+            url2)
+
+    def test_safe_chars(self):
+        url1 = 'magnet:?xt=urn:bthi:001&dn=001&tr=a&tr=b'
+        url2 = 'magnet:?xt=urn:bthi:002&dn=001&tr=a&tr=b'
+        newurl = uritools.alter_query_params(url1, dict(xt='urn:bthi:002'), safe=':')
+
+        self.assertSameURL(url2, newurl)
+        self.assertTrue('urn:bthi:002' in newurl)
 
 if __name__ == '__main__':
     unittest.main()
