@@ -227,7 +227,7 @@ class AsyncFetcher:
             try:
                 buff = self._cache.get(url)
                 return None, buff
-            except cache.KeyError:
+            except cache.CacheKeyError:
                 pass
 
         with (yield from self._semaphore):
