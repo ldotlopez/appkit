@@ -80,16 +80,6 @@ def paginate_by_query_param(uri, key, default=1):
 
 
 def query_param(uri, key, default=None):
-<<<<<<< HEAD
-=======
-    """
-    Extract a value from a query string
-    """
-    assert isinstance(uri, str) and uri
-    assert isinstance(key, str) and key
-    assert default is None or (isinstance(default, str) and default)
-
->>>>>>> aaa238c9473ab09826bebe97a275a25e88eb577f
     q = parse.parse_qs(parse.urlparse(uri).query)
     try:
         return q[key][-1]
