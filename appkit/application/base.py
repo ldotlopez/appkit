@@ -22,7 +22,7 @@ import warnings
 
 
 from appkit import extensionmanager
-from appkit import logging
+from appkit import loggertools
 
 
 class Extension(extensionmanager.Extension):
@@ -35,10 +35,10 @@ class BaseApplication(extensionmanager.ExtensionManager):
             warnings.warn('pluginpath is ignored')
 
         if logger is None:
-            logger = logging.getLogger('extension-manager')
+            logger = loggertools.getLogger('extension-manager')
 
         super().__init__(name)
-        self.logger = logging.getLogger(name)
+        self.logger = loggertools.getLogger(name)
 
 
 class ExtensionNotFoundError(extensionmanager.ExtensionNotFoundError):

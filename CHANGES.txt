@@ -1,1 +1,7 @@
-v0.0.0.20140317, Sun, 17 Mar 2014 08:47:49 +0100 -- Initial release.
+0.11.0
+======
+
+API Changes:
+
+- appkit.logging renamed to appkit.simplelogging to avoid conflicts with
+  stdlib logging
