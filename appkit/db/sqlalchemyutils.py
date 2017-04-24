@@ -149,6 +149,10 @@ def install_model(session, model):
     model.metadata.create_all(session.connection())
 
 
+def uninstall_model(session, model):
+    model.__table__.drop(session.connection())
+
+
 def get(session, model, **kwargs):
     query = session.query(model).filter_by(**kwargs)
     count = query.count()
