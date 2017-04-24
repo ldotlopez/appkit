@@ -32,6 +32,7 @@ import aiohttp
 
 from appkit import (
     cache,
+    types,
     utils
 )
 
@@ -83,7 +84,7 @@ class UrllibFetcher(BaseFetcher):
                  logger=None, **opts):
 
         # Configure logger
-        self._logger = logger or utils.NullSingleton()
+        self._logger = logger or types.NullSingleton()
 
         # Display errors
         for o in opts:
@@ -110,10 +111,12 @@ class UrllibFetcher(BaseFetcher):
             self._cache = cache.NullCache()
 
     def fetch(self, url, **opts):
-        buff = self._cache.get(url)
-        if buff:
+        try:
+            buff = self._cache.get(url)
             self._logger.debug("found in cache: {}".format(url))
             return buff
+        except cache.CacheKeyMissError:
+            pass
 
         headers = self._headers.copy()
         if 'headers' in opts:

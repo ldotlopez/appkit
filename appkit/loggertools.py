@@ -114,16 +114,16 @@ def setHandler(handler):
     if handler is None:
         handler = DefaultHandler
 
-    global _logHandler
-    _logHandler = handler
+    global DEFAULT_HANDLER
+    DEFAULT_HANDLER = handler
 
 
 def setFormatter(formatter):
     if formatter is None:
         formatter = logging.Formatter
 
-    global _logFormatter
-    _logFormatter = formatter
+    global DEFAULT_FORMATTER
+    DEFAULT_FORMATTER = formatter
 
 
 def getLogger(key=None, level=None, format=DEFAULT_FORMAT,
