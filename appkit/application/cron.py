@@ -20,7 +20,7 @@
 
 from appkit import (
     application,
-    logging,
+    loggertools,
     utils
 )
 from appkit.application import (
@@ -60,7 +60,7 @@ class Manager:
         self.app = app
         self.app.register_extension_point(
             self.__class__.TASK_EXTENSION_POINT)
-        self.logger = logging.getLogger('cronmanager')
+        self.logger = loggertools.getLogger('cronmanager')
 
         self.app._register_as_service(self.__class__.SERVICE_NAME, self)
 
@@ -180,7 +180,7 @@ class Command(commands.Command):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.logger = logging.getLogger('cron')
+        self.logger = loggertools.getLogger('cron')
 
     def execute(self, app, arguments):
         list_ = arguments.list

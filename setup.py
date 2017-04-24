@@ -10,7 +10,7 @@ pkgs = [x for x in pkgs if x and x[0] != '#']
 
 setup(
     name='appkit',
-    version='0.9.0',
+    version='0.11.0',
     author='Luis López',
     author_email='ldotlopez@gmail.com',
     packages=['appkit', 'appkit.application', 'appkit.db'],
