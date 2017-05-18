@@ -82,7 +82,7 @@ class Manager:
         return parser
 
     def get_commands(self):
-        yield from self.app.get_extensions_for(
+        return self.app.get_extensions_for(
             self.__class__.COMMAND_EXTENSION_POINT)
 
     def call_execute_method(self, command, arguments):
