@@ -54,12 +54,16 @@ class ApplicationMixin:
         assert isinstance(name, str)
 
         # Check requested extension is a service
-        if extension_point == self.__class__.SERVICE_EXTENSION_POINT and \
-           name in self._services:
+        if (issubclass(extension_point,
+                       self.__class__.SERVICE_EXTENSION_POINT) and
+                name in self._services):
             return self._services[name]
 
         return super().get_extension(extension_point, name,
                                      *args, **kwargs)
 
     def get_service(self, name):
+        if name in self._services:
+            return self._services[name]
+
         return self.get_extension(self.__class__.SERVICE_EXTENSION_POINT, name)

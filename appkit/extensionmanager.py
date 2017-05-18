@@ -95,13 +95,14 @@ class ExtensionManager:
 
         # Distinguish between extension points and extension classes
         if hasattr(extension_point, '__extension_name__'):
-            msg = "Attempt to register an extension as extension point"
+            msg = "Attempt to register an extension {cls} as extension point"
+            msg = msg.format(cls=full_cls_name)
             raise TypeError(msg)
 
         # Avoid duplicated extension points
         if extension_point in self._registry:
-            msg = "Extension point {clsname} already registered"
-            msg = msg.format(clsname=extension_point.__name__)
+            msg = "Extension point {cls} already registered"
+            msg = msg.format(cls=full_cls_name)
             raise ExtensionManagerError(msg)
 
         # Avoid inter-subclassing between extension points
