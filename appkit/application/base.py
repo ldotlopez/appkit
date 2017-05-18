@@ -46,9 +46,6 @@ class ExtensionNotFoundError(extensionmanager.ExtensionNotFoundError):
 
 
 class ExtensionError(Exception):
-    """
-    Generic extension error
-    """
     pass
 
 

@@ -62,6 +62,7 @@ class Manager:
             self.__class__.TASK_EXTENSION_POINT)
         self.logger = loggertools.getLogger('cronmanager')
 
+        # FIXME: Remove this
         self.app._register_as_service(self.__class__.SERVICE_NAME, self)
 
     @abc.abstractmethod
