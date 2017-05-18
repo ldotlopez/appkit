@@ -30,14 +30,14 @@ class Extension(extensionmanager.Extension):
 
 
 class BaseApplication(extensionmanager.ExtensionManager):
-    def __init__(self, name, pluginpath=None, logger=None):
+    def __init__(self, name, *args, pluginpath=None, logger=None, **kwargs):
         if pluginpath is not None:
             warnings.warn('pluginpath is ignored')
 
         if logger is None:
             logger = loggertools.getLogger('extension-manager')
 
-        super().__init__(name)
+        super().__init__(name, *args, **kwargs)
         self.logger = loggertools.getLogger(name)
 
 

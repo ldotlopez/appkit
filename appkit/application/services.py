@@ -22,8 +22,8 @@ from appkit import application
 
 
 class Service(application.Extension):
-    def __init__(self, app):
-        super().__init__()
+    def __init__(self, app, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.app = app
 
 
