@@ -21,6 +21,7 @@
 import abc
 import argparse
 import collections
+import functools
 import sys
 
 from appkit import application
@@ -28,12 +29,17 @@ from appkit import application
 
 class Command(application.Extension):
     HELP = ''
-    ARGUMENTS = ()
+    PARAMETERS = ()
 
-    def setup_argparser(self, cmdargparser):
-        for argument in self.ARGUMENTS:
-            args, kwargs = argument()
-            cmdargparser.add_argument(*args, **kwargs)
+    def setup_argparser(self, parser):
+        for param in self.PARAMETERS:
+            fn = parser.add_argument
+
+            if param.short_flag:
+                fn = functools.partial(fn, param.short_flag)
+
+            fn = functools.partial(fn, param.long_flag)
+            fn(**param.kwargs)
 
     @abc.abstractmethod
     def execute(self, app, args):

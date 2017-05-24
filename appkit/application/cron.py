@@ -150,30 +150,31 @@ class Command(commands.Command):
     SERVICE_NAME = 'cron'
 
     HELP = 'Run cron tasks'
-    ARGUMENTS = (
-        application.cliargument(
-            '-a', '--all',
-            dest='all',
+    PARAMETERS = (
+        application.Parameter(
+            'all',
+            abbr='a',
             action='store_true',
             default=[],
             help=('Run all tasks')
         ),
-        application.cliargument(
-            '-t', '--task',
+        application.Parameter(
+            'task',
+            abbr='t',
             dest='tasks',
             action='append',
             default=[],
             help=('Run specifics task')
         ),
-        application.cliargument(
-            '-f', '--force',
-            dest='force',
+        application.Parameter(
+            'force',
+            abbr='f',
             action='store_true',
             help=('Force tasks to run omiting intervals')
         ),
-        application.cliargument(
-            '-l', '--list',
-            dest='list',
+        application.Parameter(
+            'list',
+            abbr='l',
             action='store_true',
             help=('Show registered tasks')
         ),
