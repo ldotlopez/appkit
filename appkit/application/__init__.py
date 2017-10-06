@@ -21,22 +21,22 @@
 from appkit.application.base import (
     BaseApplication,
     Extension,
+    Parameter,
     ArgumentsError,
     ConfigurationError,
     RequirementError,
     ExtensionError,
-    ExtensionNotFoundError,
-    cliargument
+    ExtensionNotFoundError
 )
 
 
 __all__ = [
     'BaseApplication',
     'Extension',
+    'Parameter',
     'ArgumentsError',
     'ConfigurationError',
     'RequirementError',
     'ExtensionError',
-    'ExtensionNotFoundError',
-    'cliargument'
+    'ExtensionNotFoundError'
 ]

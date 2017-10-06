@@ -95,13 +95,14 @@ class ExtensionManager:
 
         # Distinguish between extension points and extension classes
         if hasattr(extension_point, '__extension_name__'):
-            msg = "Attempt to register an extension as extension point"
+            msg = "Attempt to register an extension {cls} as extension point"
+            msg = msg.format(cls=full_cls_name)
             raise TypeError(msg)
 
         # Avoid duplicated extension points
         if extension_point in self._registry:
-            msg = "Extension point {clsname} already registered"
-            msg = msg.format(clsname=extension_point.__name__)
+            msg = "Extension point {cls} already registered"
+            msg = msg.format(cls=full_cls_name)
             raise ExtensionManagerError(msg)
 
         # Avoid inter-subclassing between extension points
@@ -193,7 +194,7 @@ class ExtensionManager:
 
     def get_extension_names_for(self, extension_point):
         assert extension_point in self._registry
-        yield from self._registry[extension_point]
+        return list(self._registry[extension_point])
 
     def get_extensions_for(self, extension_point, *args, **kwargs):
         if extension_point not in self._registry:
@@ -201,9 +202,9 @@ class ExtensionManager:
             msg = msg.format(name=extension_point.__qualname__)
             raise ExtensionManagerError(msg)
 
-        yield from ((name, self.get_extension(
-                    extension_point, name, *args, **kwargs))
-                    for name in self._registry[extension_point])
+        return [(name, self.get_extension(extension_point, name,
+                                          *args, **kwargs))
+                for name in self._registry[extension_point]]
 
     def get_extension(self, extension_point, name, *args, **kwargs):
         cls = self._get_extension_class(extension_point, name)
