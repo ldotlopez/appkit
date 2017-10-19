@@ -48,33 +48,6 @@ def shift_namespace_keys(ns):
         delattr(ns, oldattr)
 
 
-class ConsoleCommandExtension_old(application.Applet, application.Extension):
-    HELP = ''
-    PARAMETERS = ()
-
-    def setup_argparser(self, parser, base=None):
-        if self.children:
-            dest = base + '-subcommand' if base else 'subcommand'
-            chidren_parsers = parser.add_subparsers(dest=dest)
-            for (name, child) in self.children.items():
-                child_parser = chidren_parsers.add_parser(name)
-                base = base + '-' + name if base else name
-                child.setup_argparser(child_parser, base)
-
-        for param in self.PARAMETERS:
-            fn = parser.add_argument
-
-            if param.short_flag:
-                fn = functools.partial(fn, param.short_flag)
-
-            fn = functools.partial(fn, param.long_flag)
-            fn(**param.kwargs)
-
-    @abc.abstractmethod
-    def main(self, app, args):
-        raise NotImplementedError()
-
-
 class ConsoleCommandExtension(application.Applet,  application.Extension):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
