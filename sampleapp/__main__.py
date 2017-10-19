@@ -21,5 +21,4 @@
 from sampleapp import app
 
 if __name__ == '__main__':
-    print('hi!')
-    app.App().run_from_args()
+    app.App().execute_from_args()

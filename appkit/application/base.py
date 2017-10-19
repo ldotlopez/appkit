@@ -17,55 +17,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
 # USA.
 
-
-import copy
-import re
-import warnings
-
-
 from appkit import extensionmanager
-from appkit import loggertools
 
-
-class BaseApplication(extensionmanager.ExtensionManager):
-    def __init__(self, name, *args, pluginpath=None, logger=None, **kwargs):
-        if pluginpath is not None:
-            warnings.warn('pluginpath is ignored')
-
-        if logger is None:
-            logger = loggertools.getLogger('extension-manager')
-
-        super().__init__(name, *args, **kwargs)
-        self.logger = loggertools.getLogger(name)
-
-
-class Extension(extensionmanager.Extension):
-    pass
-
-
-class Parameter:
-    def __init__(self, name, abbr=None, **kwargs):
-        if not re.match(r'^[a-z0-9-_]+$', name, re.IGNORECASE):
-            raise ValueError(name)
-
-        if abbr and len(abbr) != 1:
-            msg = "abbr must be a single letter"
-            raise ValueError(abbr, msg)
-
-        self.name = str(name).replace('-', '_')
-        self.abbr = str(abbr) if abbr else None
-        self.kwargs = copy.copy(kwargs)
-
-    @property
-    def short_flag(self):
-        if not self.abbr:
-            return None
-
-        return '-' + self.abbr
-
-    @property
-    def long_flag(self):
-        return '--' + self.name.replace('_', '-')
 
 class ExtensionNotFoundError(extensionmanager.ExtensionNotFoundError):
     pass

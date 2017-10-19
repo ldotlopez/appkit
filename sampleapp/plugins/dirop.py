@@ -18,22 +18,35 @@
 # USA.
 
 
-from appkit.application.console import ConsoleCommandExtension
+from appkit.application import Parameter, console
 
 
-class Other(ConsoleCommandExtension):
+class DirOP(console.ConsoleCommandExtension):
+    __extension_name__ = 'dir-op'
 
-    __extension_name__ = 'other'
+    HELP = 'Change desktop background'
+    PARAMETERS = (
+        Parameter(
+            'directory',
+            abbr='d',
+            help='Choose random background from directory',
+            required=True
+        ),
+    )
 
-    HELP = 'Optional command'
+    def validator(self, directory=None):
+        if not isinstance(directory, str) or directory == '':
+            raise ValueError('Invalid directory: {}'.format(repr(directory)))
 
-    def main(self, *args, **kwargs):
-        print("Other is running")
+        return {
+            'directory': directory
+        }
 
-    def validate(self, *args, **kwargs):
-        pass
+    def main(self, directory):
+        print("Got directory: {}".format(directory))
+        return 0
 
 
 __sampleapp_extensions__ = [
-    Other
+    DirOP
 ]

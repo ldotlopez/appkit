@@ -18,25 +18,40 @@
 # USA.
 
 
-import appkit
+from appkit.application.console import ConsoleCommandExtension
 
 
-class BackgroundUpdater(appkit.CommandExtension):
-    __extension_name__ = 'background-updater'
+class ConfigOpGet(ConsoleCommandExtension):
+    def main(self):
+        print("config get ()")
 
-    help = 'Change desktop background'
-    arguments = (
-        appkit.cliargument(
-            '-d', '--directory',
-            help='Choose random background from directory',
-            required=True
-        ),
+
+class ConfigOpSet(ConsoleCommandExtension):
+    def main(self):
+        print("config set ()")
+
+
+class ConfigOps(ConsoleCommandExtension):
+    CHILDREN = (
+        ('get', ConfigOpGet),
+        ('set', ConfigOpSet)
     )
 
-    def run(self, arguments):
-        print("Got directory: {}".format(arguments.directory))
-        return 0
+
+class ConfigReset(ConsoleCommandExtension):
+    pass
+
+
+class ConfigCommand(ConsoleCommandExtension):
+    __extension_name__ = 'config'
+
+    HELP = 'Optional command'
+    CHILDREN = (
+        ('ops', ConfigOps),
+        ('reset', ConfigReset)
+    )
+
 
 __sampleapp_extensions__ = [
-    BackgroundUpdater
+    ConfigCommand
 ]

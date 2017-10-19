@@ -18,11 +18,34 @@
 # USA.
 
 
-import appkit
+from appkit import application
+from appkit.application import console
 
 
-class App(appkit.CLIApp):
+class App(console.ConsoleAppMixin, application.App):
     def __init__(self):
         super().__init__('sampleapp')
-        self.load_plugin('backgroundupdater')
-        self.load_plugin('other')
+        self.load_plugin('dirop')
+        self.load_plugin('config')
+        # self.load_plugin('nested')
+
+    def setup_argument_parser(self, parser):
+        super().setup_argument_parser(parser)
+        parser.add_argument(
+            '--magic',
+            action='store_true',
+            help='Do magic'
+        )
+
+    def main(self, magic=False, **params):
+        print("=> {} magic {}".format(
+            'with' if magic else 'without',
+            ':-D' if magic else ':-('))
+
+        for (k, v) in params.items():
+            print("{}={}".format(k, v))
+
+    def handle_application_parameters(self, magic, **kwargs):
+        super().handle_application_parameters(**kwargs)
+        print("magic:", magic)
+        self.magic = magic
