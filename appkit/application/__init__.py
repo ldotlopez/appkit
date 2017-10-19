@@ -18,16 +18,10 @@
 # USA.
 
 
-from appkit.application.base import (
-    ArgumentsError,
-    ConfigurationError,
-    RequirementError,
-    ExtensionError,
-    ExtensionNotFoundError
-)
-
 from appkit import extensionmanager
 from appkit import loggertools
+
+
 import abc
 import copy
 import re
@@ -44,6 +38,26 @@ __all__ = [
     'ExtensionError',
     'ExtensionNotFoundError'
 ]
+
+
+class ExtensionNotFoundError(extensionmanager.ExtensionNotFoundError):
+    pass
+
+
+class ExtensionError(Exception):
+    pass
+
+
+class ConfigurationError(ExtensionError):
+    pass
+
+
+class ArgumentsError(ExtensionError):
+    pass
+
+
+class RequirementError(ExtensionError):
+    pass
 
 
 class App(extensionmanager.ExtensionManager):
