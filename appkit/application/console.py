@@ -18,7 +18,6 @@
 # USA.
 
 
-import abc
 import argparse
 import collections
 import functools
@@ -27,35 +26,59 @@ import sys
 from appkit import application
 
 
+SUBCOMMAND_ATTR = '_subcommand'
+SUBCOMMANDS_SEPARATOR = '_'
+
+assert SUBCOMMAND_ATTR.startswith(SUBCOMMANDS_SEPARATOR)
+
+
 def shift_namespace_keys(ns):
-    if not hasattr(ns, '_subcommand'):
-        raise ValueError('no _subcommand attr in ns')
+    """
+    Utility function to rewrite arguparse.Namespace in order to pass it to
+    subcommands
+    """
 
-    # Drop the value
-    sub_value = ns._subcommand
-    delattr(ns, '_subcommand')
+    if not hasattr(ns, SUBCOMMAND_ATTR):
+        msg = "Namespace has no {attr} attribute"
+        msg = msg.format(attr=SUBCOMMAND_ATTR)
+        raise ValueError(ns, msg)
 
+    # Get and delete sub_attr
+    sub_value = getattr(ns, SUBCOMMAND_ATTR)
+    delattr(ns, SUBCOMMAND_ATTR)
+
+    # Get all related attributes:
+    # - The inmediate _subcommand_x
+    # - Others like _subcommand_x_*
+    discr = SUBCOMMAND_ATTR + SUBCOMMANDS_SEPARATOR + sub_value
     attrs = [attr for attr in vars(ns)
-             if (attr == '_subcommand_' + sub_value or
-                 attr.startswith('_subcommand_' + sub_value + '_'))]
+             if (attr == discr or
+                 attr.startswith(discr + SUBCOMMANDS_SEPARATOR))]
 
-    attrs_and_parts = [(attr, attr.split('_')) for attr in attrs]
-    attrs_and_parts = sorted(attrs_and_parts, key=lambda x: len(x[1]))
+    # Split those attrs into pieces and sort by the number of pieces
+    attrs_and_parts = [
+        (attr, attr.split(SUBCOMMANDS_SEPARATOR))
+        for attr in attrs]
+    attrs_and_parts = sorted(
+        attrs_and_parts,
+        key=lambda x: len(x[1]))
 
+    # Rewrite namespace moving attributes
     for (oldattr, parts) in attrs_and_parts:
-        newattr = '_subcommand' + ''.join('_' + part for part in parts[3:])
+        newattr = (
+            SUBCOMMAND_ATTR +
+            ''.join(SUBCOMMANDS_SEPARATOR + part for part in parts[3:]))
         setattr(ns, newattr, getattr(ns, oldattr))
         delattr(ns, oldattr)
 
 
 class ConsoleCommandExtension(application.Applet,  application.Extension):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def setup_parser(self, parser, command_path):
-        # Prepare a subparser for our children
+        # Insert command children
         if self.children:
-            dest = '_subcommand_' + '_'.join(command_path)
+            dest = (
+                SUBCOMMAND_ATTR +
+                ''.join(SUBCOMMANDS_SEPARATOR + x for x in command_path))
             children_parsers = parser.add_subparsers(dest=dest)
 
         for (name, child) in self.children.items():
@@ -63,6 +86,7 @@ class ConsoleCommandExtension(application.Applet,  application.Extension):
             child.setup_parser(
                 parser=child_parser, command_path=command_path + [name])
 
+        # Insert command flags
         for parameter in self.PARAMETERS:
             fn = parser.add_argument
             if parameter.short_flag:
@@ -71,24 +95,15 @@ class ConsoleCommandExtension(application.Applet,  application.Extension):
                 fn = functools.partial(fn, parameter.long_flag)
             fn(**parameter.kwargs)
 
-    def execute_from_args(self, argv=None):
-        if argv is None:
-            argv = sys.argv[1:]
-
-        parser = self.setup_parser()
-        arguments = parser.parse_args(argv)
-        return self.execute(arguments)
-
     def execute(self, arguments):
         # If we haven't children, _subcommand mustn't be set
         if not self.children:
-            assert not hasattr(arguments, '_subcommand')
+            assert not hasattr(arguments, SUBCOMMAND_ATTR)
 
         # however if we have children, _subcommand must be valid or None
         else:
-            assert (
-                arguments._subcommand is None or
-                arguments._subcommand in self.children)
+            subcommand = getattr(arguments, SUBCOMMAND_ATTR)
+            assert subcommand is None or subcommand in self.children
 
         # If we have children and a valid _subcommand go deeper
         if not self.children or arguments._subcommand is None:
@@ -155,7 +170,7 @@ class ConsoleAppMixin:
         cmds = self.get_commands()
 
         if cmds:
-            children_parser = parser.add_subparsers(dest='_subcommand')
+            children_parser = parser.add_subparsers(dest=SUBCOMMAND_ATTR)
 
         for (name, cmd) in cmds:
             cmd_parser = self.create_command_subparser(
@@ -163,62 +178,13 @@ class ConsoleAppMixin:
 
             cmd.setup_parser(cmd_parser, [name])
 
-    def execute_from_args_(self, *args):
-        assert (isinstance(args, collections.Iterable))
-        assert all([isinstance(x, str) for x in args])
+    def consume_application_arguments(self, arguments):
+        kwargs = {}
+        for name in 'verbose quiet config_files plugins'.split():
+            kwargs[name] = getattr(arguments, name)
+            delattr(arguments, name)
 
-        argparser = self.build_base_argument_parser()
-        commands = list(self.get_commands())
-
-        if False and len(commands) == 1:
-            # Single command mode
-            (cmdname, cmdext) = commands[0]
-            cmdext.setup_argparser(argparser)
-            args = argparser.parse_args(args)
-
-        else:
-            subparser = argparser.add_subparsers(
-                title='subcommands',
-                dest='subcommand',
-                description='valid subcommands',
-                help='additional help')
-
-            # Multiple command mode
-            subargparsers = {}
-            for (cmdname, cmdext) in sorted(commands):
-                subargparsers[cmdname] = subparser.add_parser(
-                    cmdname,
-                    help=cmdext.HELP)
-                cmdext.setup_parser(subargparsers[cmdname])
-
-            args = argparser.parse_args(args)
-            if not args.subcommand:
-                argparser.print_help()
-                return
-
-            cmdname = args.subcommand
-
-        try:
-            # Reuse commands
-            tmp = dict(commands)
-            return tmp[cmdname].execute(args)
-
-        except application.ArgumentsError as e:
-            if len(commands) > 1:
-                subargparsers[args.subcommand].print_help()
-            else:
-                argparser.print_help()
-
-            print("\nError message: {}".format(e), file=sys.stderr)
-
-        except Exception as e:
-            msg = "Unhandled exception «{exctype}» from «{name}»: {e}"
-            msg = msg.format(
-                exctype=e.__class__.__module__ + '.' + e.__class__.__name__,
-                name=tmp[cmdname].__class__,
-                e=str(e))
-            self.logger.critical(msg)
-            raise
+        self.params = self.__class__._Parameters(**kwargs)
 
     def execute_from_args(self, args=None):
         if args is None:
@@ -233,14 +199,6 @@ class ConsoleAppMixin:
         arguments = parser.parse_args(args)
         return self.execute(arguments)
 
-    def consume_application_arguments(self, arguments):
-        kwargs = {}
-        for name in 'verbose quiet config_files plugins'.split():
-            kwargs[name] = getattr(arguments, name)
-            delattr(arguments, name)
-
-        self.params = self.__class__._Parameters(**kwargs)
-
     def execute(self, arguments):
         def _run_main():
             return self.main(**vars(arguments))
@@ -249,9 +207,6 @@ class ConsoleAppMixin:
         cmds = self.get_commands()
 
         if not cmds:
-            """
-            App without commands, just use Application.main()
-            """
             return _run_main()
 
         subcommand = getattr(arguments, '_subcommand', None)

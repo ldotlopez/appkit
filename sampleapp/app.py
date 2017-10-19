@@ -27,7 +27,6 @@ class App(console.ConsoleAppMixin, application.App):
         super().__init__('sampleapp')
         self.load_plugin('dirop')
         self.load_plugin('config')
-        # self.load_plugin('nested')
 
     def setup_argument_parser(self, parser):
         super().setup_argument_parser(parser)
