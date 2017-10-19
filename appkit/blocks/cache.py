@@ -23,6 +23,7 @@
 import abc
 import hashlib
 import os
+import pathlib
 import pickle
 import shutil
 import sys
@@ -87,21 +88,18 @@ class BaseCache:
 
     @abc.abstractmethod
     def get(self, key):
-        """
-        Returns the requested key from the cache.
-        Parameters:
-          key - Any hasheble object.
-        """
         raise NotImplementedError()
 
     @abc.abstractmethod
     def set(self, key, value):
-        """
-        Stores value into cache associated with key.
-        Parameters:
-          key - Any hasheble object.
-          value - Value to store
-        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def delete(self, key):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def purge(self):
         raise NotImplementedError()
 
 
@@ -114,8 +112,8 @@ class NullCache(BaseCache):
 
 
 class MemoryCache(BaseCache):
-    def __init__(self, delta=-1):
-        super().__init__(delta=delta)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._mem = {}
 
     def get(self, key):
@@ -153,56 +151,57 @@ class MemoryCache(BaseCache):
 
 
 class DiskCache(BaseCache):
-    def __init__(self, basedir=None, delta=-1):
+    def __init__(self, basedir=None, *args, **kwargs):
         """
         Disk-based cache.
         Parameters:
           basedir - Root path for cache. Auxiliar cache files will be stored
                     under this path. If None is suplied then a temporal dir
                     will be used.
-          delta - Seconds needed before a entry is considered expired. Zero or
-                  negative values means that entries will never expire.
-          hashfun - A callable that will be use to transform keys into strings.
         """
-        self.basedir = basedir
-        self._is_tmp = False
+        super().__init__(*args, **kwargs)
 
-        if not self.basedir:
+        self._is_tmp = basedir is None
+        if basedir is None:
             self.basedir = tempfile.mkdtemp()
-            self._is_tmp = True
+        else:
+            self.basedir = basedir
+
+        self.basedir = pathlib.Path(self.basedir)
 
     def _on_disk_path(self, key):
         hashed = hashlib.sha1(key.encode('utf-8')).hexdigest()
-        return os.path.join(
-            self.basedir, hashed[:0], hashed[:1], hashed[:2], hashed)
+        return self.basedir / hashed[0] / hashed[:2] / hashed
+
+    def _key_is_expired(self, key):
+        return self._file_is_expired(self._on_disk_path(key))
+
+    def _path_is_expired(self, p):
+        return _now() - p.stat().st_ctime > self.delta
 
     def set(self, key, value):
-        p = self._on_disk_path(key)
-        dname = os.path.dirname(p)
+        filepath = self._on_disk_path(key)
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        filepath.write_bytes(pickle.dumps(value))
 
-        os.makedirs(dname, exist_ok=True)
-        with open(p, 'wb') as fh:
-            fh.write(pickle.dumps(value))
-
-    def get(self, key, delta=None):
+    def get(self, key):
         on_disk = self._on_disk_path(key)
+
         try:
-            s = os.stat(on_disk)
+            expired = self._path_is_expired(on_disk)
 
         except (OSError, IOError) as e:
             raise CacheKeyMissError(key) from e
 
-        delta = delta or self.delta
-        if time.mktime(time.localtime()) - s.st_mtime > delta:
-            os.unlink(on_disk)
+        if expired:
+            self.delete(key)
             raise CacheKeyExpiredError(key)
 
         try:
-            with open(on_disk, 'rb') as fh:
-                return pickle.loads(fh.read())
+            return pickle.loads(on_disk.read_bytes())
 
         except EOFError as e:
-            os.unlink(on_disk)
+            self.delete(key)
             raise CacheKeyError(key) from e
 
         except IOError as e:
@@ -211,6 +210,31 @@ class DiskCache(BaseCache):
         except OSError as e:
             raise CacheOSError() from e
 
+    def delete(self, key):
+        filepath = self._on_disk_path(key)
+        try:
+            filepath.unlink()
+
+        except FileNotFoundError:
+            pass
+
+        except IOError as e:
+            raise CacheIOError() from e
+
+        except OSError as e:
+            raise CacheOSError() from e
+
+    def purge(self):
+        expugned = []
+
+        for (dirpath, dirs, files) in os.walk(str(self.basedir)):
+            files = [self.basedir / dirpath / f for f in files]
+            expugned.extend([f for f in files if self._path_is_expired(f)])
+
+        for f in expugned:
+            assert str(f).startswith(str(self.basedir))
+            f.unlink()
+
     def __del__(self):
         if self._is_tmp:
-            shutil.rmtree(self.basedir)
+            shutil.rmtree(str(self.basedir))
