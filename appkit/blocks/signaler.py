@@ -25,17 +25,12 @@ class _BaseException(Exception):
     pass
 
 
-class SignalRegisterError(_BaseException):
-    def __init__(self, signal, message):
-        self.signal = signal
-        self.message = message
-        super().__init__()
+class DuplicatedSignalError(_BaseException):
+    pass
 
 
 class UnknowSignalError(_BaseException):
-    def __init__(self, signal, message):
-        self.signal = signal
-        super().__init__()
+    pass
 
 
 class Signaler:
@@ -54,9 +49,7 @@ class Signaler:
 
     def register(self, name):
         if name in self._signals:
-            msg = "Signal '{name}' was already registered"
-            msg = msg.format(name=name)
-            raise SignalRegisterError(name, message=msg)
+            raise DuplicatedSignalError(name)
 
         ret = blinker.Signal()
         self._signals[name] = ret
