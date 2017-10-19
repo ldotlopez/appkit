@@ -20,7 +20,7 @@
 
 import unittest
 
-from ldotcommons import store
+from appkit.blocks import store
 
 
 class SelectorInterfaceTest(unittest.TestCase):
@@ -69,9 +69,9 @@ class SelectorInterfaceTest(unittest.TestCase):
         s.set('y.a', 2)
         s.set('y.b', 2)
 
-        self.assertTrue(s.has_key('x'))
-        self.assertTrue(s.has_key('y'))
-        self.assertTrue(s.has_key('y.a'))
+        self.assertTrue('x' in s)
+        self.assertTrue('y' in s)
+        self.assertTrue('y.a' in s)
 
     def test_has_ns(self):
         s = store.Store()
@@ -96,15 +96,15 @@ class SelectorInterfaceTest(unittest.TestCase):
         s.set('x', 1)
         s.empty()
 
-        self.assertFalse(s.has_key('x'))
+        self.assertFalse('x' in s)
 
     def test_replace(self):
         s = store.Store()
         s.set('x', 1)
         s.replace({'y': 2})
 
-        self.assertFalse(s.has_key('x'))
-        self.assertTrue(s.has_key('y'))
+        self.assertFalse('x' in s)
+        self.assertTrue('y' in s)
 
     def test_override_with_dict(self):
         s = store.Store()
@@ -212,6 +212,7 @@ class SelectorInterfaceTest(unittest.TestCase):
         s = store.Store()
         s.set('a.b', 'c.d')
         self.assertEqual(s.get('a.b'), 'c.d')
+
 
 if __name__ == '__main__':
     unittest.main()
