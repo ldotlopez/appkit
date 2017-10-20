@@ -18,8 +18,12 @@
 # USA.
 
 
-from appkit import extensionmanager
-from appkit import loggertools
+from appkit.blocks import (
+    extensionmanager,
+    quicklogging,
+    signaler,
+    store
+)
 
 
 import abc
@@ -61,15 +65,29 @@ class RequirementError(ExtensionError):
 
 
 class App(extensionmanager.ExtensionManager):
-    def __init__(self, name, *args, pluginpath=None, logger=None, **kwargs):
+    def __init__(self,
+                 name,
+                 *args,
+                 pluginpath=None, settings=None, logger=None,
+                 signals=None,
+                 **kwargs):
+
         if pluginpath is not None:
             warnings.warn('pluginpath is ignored')
 
         if logger is None:
-            logger = loggertools.getLogger('extension-manager')
+            logger = quicklogging.QuickLogger()
+
+        if settings is None:
+            settings = store.Store()
+
+        if signals is None:
+            signals = signaler.Signaler()
 
         super().__init__(name, *args, **kwargs)
-        self.logger = loggertools.getLogger(name)
+        self.logger = logger
+        self.settings = settings
+        self.signals = signals
 
     @abc.abstractmethod
     def main(self, **params):
