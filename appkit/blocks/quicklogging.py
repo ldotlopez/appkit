@@ -21,7 +21,6 @@
 
 from appkit import utils
 
-
 import enum
 import logging
 
@@ -33,17 +32,16 @@ except ImportError:
     _has_color = False
 
 
-_loggers = dict()
-_logLevel = None
-
-
+# Some of the default handlers are set at the bottom of this file, after all
+# class declarations
 DEFAULT_HANDLER = None
 DEFAULT_FORMATTER = None
-DEFAULT_FORMAT = "[%(levelname)s] [%(name)s] %(message)s"
 DEFAULT_LEVEL = None
+DEFAULT_FORMAT = "[%(levelname)s] [%(name)s] %(message)s"
 
 
 class Level(enum.Enum):
+    # From minor to major value
     DEBUG = logging.DEBUG
     INFO = logging.INFO
     WARNING = logging.WARNING
@@ -65,12 +63,47 @@ class Level(enum.Enum):
         return l[new]
 
     @classmethod
-    def ensure(cls, val):
+    def __call__(cls, value):
         for x in list(cls):
-            if x.value == val:
+            if x == value or x.value == value:
                 return x
 
-        raise ValueError(val)
+        raise ValueError(value)
+
+
+class QuickLogger(logging.Logger):
+    def __init__(
+            self, name=None, level=None, format=DEFAULT_FORMAT,
+            handler_class=None, formatter_class=None):
+
+        if name is None:
+            name = utils.prog_name()
+
+        if level is None:
+            level = DEFAULT_LEVEL
+        else:
+            level = Level(level)
+
+        if handler_class is None:
+            handler_class = DEFAULT_HANDLER
+
+        if formatter_class is None:
+            formatter_class = DEFAULT_FORMATTER
+
+        super().__init__(name, level=level.value)
+
+        handler = handler_class()
+        handler.setFormatter(formatter_class(format))
+        self.addHandler(handler)
+
+    # def setLevel(self, level):
+    #     if level in Level:
+    #         level = level.value
+
+    #     super().setLevel(level)
+
+    # def getEffectiveLevel(self):
+    #     return Level(super().getEffectiveLevel())
 
 
 class DefaultHandler(logging.StreamHandler):
@@ -98,80 +131,6 @@ class DefaultFormatter(logging.Formatter):
 
         return s
 
-
-def setLevel(level):
-    """
-    Set global logging level for all appkit.logging loggers
-    """
-    global _loggers
-    global _logLevel
-
-    if level not in Level:
-        raise ValueError(level)
-
-    _logLevel = level
-    for (name, logger) in _loggers.items():
-        logger.setLevel(level.value)
-
-
-def getLevel():
-    """
-    Get global logging level for all appkit.logging loggers
-    """
-    global _logLevel
-    return _logLevel
-
-
-def setHandler(handler):
-    if handler is None:
-        handler = DefaultHandler
-
-    global DEFAULT_HANDLER
-    DEFAULT_HANDLER = handler
-
-
-def setFormatter(formatter):
-    if formatter is None:
-        formatter = logging.Formatter
-
-    global DEFAULT_FORMATTER
-    DEFAULT_FORMATTER = formatter
-
-
-def getLogger(key=None, level=None, format=DEFAULT_FORMAT,
-              handler_class=None, formatter_class=None):
-    global _loggers
-    global _logLevel
-
-    if key is None:
-        key = utils.prog_name()
-
-    if level is None:
-        level = _logLevel.value
-
-    if handler_class is None:
-        handler_class = DEFAULT_HANDLER
-
-    if formatter_class is None:
-        formatter_class = DEFAULT_FORMATTER
-
-    if key not in _loggers:
-        _loggers[key] = logging.getLogger(key)
-        _loggers[key].setLevel(level)
-
-        handler = handler_class()
-        handler.setFormatter(formatter_class(format))
-        _loggers[key].addHandler(handler)
-
-    return _loggers[key]
-
-
-def clearLoggers():
-    global _loggers
-    _loggers = dict()
-
-
-_logLevel = Level.DEBUG
 
 DEFAULT_HANDLER = DefaultHandler
 DEFAULT_FORMATTER = DefaultFormatter

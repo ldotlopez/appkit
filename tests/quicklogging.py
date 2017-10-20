@@ -20,53 +20,60 @@
 
 import unittest
 
-# FIXME: Rename appkit.loggertools to appkit.blocks.easylogging
-from appkit import loggertools as el
+from appkit.blocks import quicklogging as ql
+import logging
 
 
-class TestLogging(unittest.TestCase):
-    def setUp(self):
-        el.setLevel(el.DEFAULT_LEVEL)
-        el.clearLoggers()
+# class TestQuickLogger(unittest.TestCase):
+#     def test_level_prop(self):
+#         log = ql.QuickLogger(level=ql.Level.INFO)
+#         self.assertEqual(
+#             log.getEffectiveLevel(),
+#             ql.Level.INFO)
+
+#         log = ql.QuickLogger(level=ql.Level.DEBUG)
+#         log.setLevel(ql.Level.CRITICAL)
+#         self.assertEqual(
+#             log.getEffectiveLevel(),
+#             ql.Level.CRITICAL)
+
+#         log = ql.QuickLogger(level=ql.Level.DEBUG)
+#         log.level = ql.Level.INFO
+
+
+class TestLevel(unittest.TestCase):
+    def test_level_conversion(self):
+        self.assertEqual(
+            ql.Level(logging.INFO),
+            ql.Level.INFO)
+
+        self.assertEqual(
+            ql.Level(logging.WARNING),
+            ql.Level.WARNING)
 
     def test_level_incr_decr(self):
         self.assertEqual(
-            el.Level.incr(el.Level.INFO),
-            el.Level.DEBUG)
+            ql.Level.incr(ql.Level.INFO),
+            ql.Level.DEBUG)
 
         self.assertEqual(
-            el.Level.decr(el.Level.DEBUG),
-            el.Level.INFO)
+            ql.Level.decr(ql.Level.DEBUG),
+            ql.Level.INFO)
 
         self.assertEqual(
-            el.Level.decr(el.Level.CRITICAL),
-            el.Level.CRITICAL)
+            ql.Level.decr(ql.Level.CRITICAL),
+            ql.Level.CRITICAL)
 
         self.assertEqual(
-            el.Level.incr(el.Level.DEBUG),
-            el.Level.DEBUG)
+            ql.Level.incr(ql.Level.DEBUG),
+            ql.Level.DEBUG)
 
-    def test_get_loger(self):
-        l1 = el.getLogger()
-        l2 = el.getLogger()
-        self.assertTrue(l1 is l2)
-
-    def test_set_level(self):
-        el.setLevel(el.Level.INFO)
-        l1 = el.getLogger()
-        self.assertEqual(el.Level.ensure(l1.level), el.Level.INFO)
-
-        el.setLevel(el.Level.WARNING)
-        self.assertEqual(el.Level.ensure(l1.level), el.Level.WARNING)
-
-    # def test_set_handler(self):
-    #     class FooHandler(loggertools.DefaultHandler):
-    #         pass
-
-    #     loggertools.setHandler(FooHandler)
-
-    #     logger = loggertools.getLogger('foo')
-    #     self.assertTrue(isinstance(logger.handlers[0], FooHandler))
+    # def test_level_lt(self):
+    #     # ipdb> logging.DEBUG.__lt__(logging.INFO)
+    #     # True
+    #     self.assertTrue(ql.Level.DEBUG < ql.Level.INFO)
+    #     self.assertTrue(ql.Level.DEBUG < logging.INFO)
+    #     self.assertTrue(ql.Level.INFO == logging.INFO)
 
 
 if __name__ == '__main__':
