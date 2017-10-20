@@ -25,40 +25,46 @@ import io
 import socket
 import sys
 
+
 from os import path
-from urllib import request, error as urllib_error
+from urllib import request
+import urllib.error
+
 
 import aiohttp
 
+
 from appkit import (
-    cache,
-    types,
+    Null,
     utils
+)
+from appkit.blocks import (
+    cache
 )
 
 
-class Fetcher:
+class HTTPClient:
     def __new__(cls, fetcher_name, *args, **kwargs):
         clsname = fetcher_name.replace('-', ' ').replace('_', ' ').capitalize()
-        clsname = clsname + 'Fetcher'
+        clsname = clsname + 'HTTPClient'
 
         mod = sys.modules[__name__]
         cls = getattr(mod, clsname)
         return cls(*args, **kwargs)
 
 
-class BaseFetcher(object):
+class BaseHTTPClient:
     def fetch(self, url, **opts):
         raise NotImplementedError('Method not implemented')
 
 
-class MockFetcher(BaseFetcher):
+class MockClient(BaseHTTPClient):
     def __init__(self, basedir=None, **opts):
         self._basedir = basedir
 
     def fetch(self, url, **opts):
         if not self._basedir:
-            raise FetchError("MockFetcher basedir is not configured")
+            raise FetchError("MockHTTPClient basedir is not configured")
 
         url = utils.slugify(url)
 
@@ -77,14 +83,14 @@ class MockFetcher(BaseFetcher):
             raise FetchError(msg) from e
 
 
-class UrllibFetcher(BaseFetcher):
+class UrllibClient(BaseHTTPClient):
     def __init__(self,
                  user_agent=None, headers={},
                  enable_cache=False, cache_delta=-1,
-                 logger=None, **opts):
+                 logger=Null, **opts):
 
         # Configure logger
-        self._logger = logger or types.NullSingleton()
+        self._logger = logger
 
         # Display errors
         for o in opts:
@@ -104,7 +110,7 @@ class UrllibFetcher(BaseFetcher):
             self._cache = cache.Disk(basedir=cache_path,
                                      delta=cache_delta)
 
-            msg = 'UrllibFetcher using cache {path}'
+            msg = 'UrllibHTTPClient using cache {path}'
             msg = msg.format(path=cache_path)
             self._logger.debug(msg)
         else:
@@ -134,7 +140,7 @@ class UrllibFetcher(BaseFetcher):
                 buff = gf.read()
             else:
                 buff = resp.read()
-        except (socket.error, urllib_error.HTTPError) as e:
+        except (socket.error, urllib.error.HTTPError) as e:
             raise FetchError("{message}".format(message=e))
 
         self._logger.debug("stored in cache: {}".format(url))
@@ -142,13 +148,14 @@ class UrllibFetcher(BaseFetcher):
         return buff
 
 
-class AIOHttpFetcher:
+class AIOClient:
     def __init__(self,
                  user_agent=None, headers={},
                  enable_cache=False, cache_delta=-1,
-                 logger=None, **opts):
+                 logger=Null, **opts):
+
         # Configure logger
-        self._logger = logger or utils.NullSingleton()
+        self._logger = logger
 
         # Display errors
         for o in opts:
@@ -167,7 +174,7 @@ class AIOHttpFetcher:
                                          create=True, is_folder=True)
             self._cache = cache.DiskCache(basedir=cache_path,
                                           delta=cache_delta)
-            msg = 'AIOHttpFetcher using cache {path}'
+            msg = 'AIOHttpHTTPClient using cache {path}'
             msg = msg.format(path=cache_path)
             self._logger.debug(msg)
 
@@ -201,7 +208,7 @@ class AIOHttpFetcher:
         return buff
 
 
-class AsyncFetcher:
+class AsyncHTTPClient:
     def __init__(self, logger=None, cache=None, max_requests=1,
                  **session_options):
         self._logger = logger
