@@ -53,20 +53,29 @@ class TestLevel(unittest.TestCase):
 
     def test_level_incr_decr(self):
         self.assertEqual(
-            ql.Level.incr(ql.Level.INFO),
+            ql.Level.INFO.incr(),
             ql.Level.DEBUG)
 
         self.assertEqual(
-            ql.Level.decr(ql.Level.DEBUG),
+            ql.Level.DEBUG.decr(),
             ql.Level.INFO)
 
         self.assertEqual(
-            ql.Level.decr(ql.Level.CRITICAL),
+            ql.Level.CRITICAL.decr(),
             ql.Level.CRITICAL)
 
         self.assertEqual(
-            ql.Level.incr(ql.Level.DEBUG),
+            ql.Level.DEBUG.incr(),
             ql.Level.DEBUG)
+
+        self.assertEqual(
+            ql.Level.WARNING + 2,
+            ql.Level.DEBUG)
+
+        self.assertEqual(
+            ql.Level.DEBUG - 2,
+            ql.Level.WARNING)
+
 
     # def test_level_lt(self):
     #     # ipdb> logging.DEBUG.__lt__(logging.INFO)

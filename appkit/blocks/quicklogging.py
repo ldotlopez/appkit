@@ -49,26 +49,35 @@ class Level(enum.Enum):
     CRITICAL = logging.CRITICAL
 
     @classmethod
-    def incr(cls, val, n=1):
-        l = list(cls)
-        idx = l.index(val)
-        new = max(0, idx - n)
-        return l[new]
-
-    @classmethod
-    def decr(cls, val, n=1):
-        l = list(cls)
-        idx = l.index(val)
-        new = min(len(l) - 1, idx + n)
-        return l[new]
-
-    @classmethod
     def __call__(cls, value):
         for x in list(cls):
             if x == value or x.value == value:
                 return x
 
         raise ValueError(value)
+
+    def incr(self):
+        return self.step(+1)
+
+    def decr(self):
+        return self.step(-1)
+
+    def step(self, n):
+        cls = self.__class__
+        levels = list(cls)
+        curr = levels.index(self)
+
+        new = curr - n
+        new = min(new, len(levels) - 1)
+        new = max(0, new)
+
+        return levels[new]
+
+    def __add__(self, n):
+        return self.step(n)
+
+    def __sub__(self, n):
+        return self.step(-n)
 
 
 class QuickLogger(logging.Logger):
