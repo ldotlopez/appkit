@@ -17,19 +17,37 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
 # USA.
 
-from .core import (
-    SingletonMetaclass,
-    NoneType,
-    RegexpType,
+
+import unittest
+
+
+from appkit import (
     Null,
-    Undefined
+    SingletonMetaclass
 )
 
 
-__all__ = [
-    'SingletonMetaclass',
-    'NoneType',
-    'RegexpType',
-    'Null',
-    'Undefined'
-]
+class TestCoreTypes(unittest.TestCase):
+    def test_null_singleton(self):
+        n1 = Null()
+        n2 = Null()
+
+        self.assertTrue(n1 is n2 is Null)
+
+    def test_null_attrs(self):
+        n = Null()
+        self.assertTrue(n is n.foo is n.foo.bar)
+
+    def test_null_item(self):
+        n = Null()
+        self.assertTrue(n is n['foo'] is n['foo']['bar'] is n[0] is Null)
+
+    def test_singleton(self):
+        class A(metaclass=SingletonMetaclass):
+            pass
+
+        self.assertTrue(A() is A())
+
+
+if __name__ == '__main__':
+    unittest.main()

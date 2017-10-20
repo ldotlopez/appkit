@@ -21,20 +21,6 @@
 import re
 
 
-#
-# Aliases
-#
-
-
-NoneType = type(None)
-RegexpType = type(re.compile(r''))
-
-
-#
-# Metaclasses
-#
-
-
 class SingletonMetaclass(type):
     def __call__(cls, *args, **kwargs):  # nopep8
         instance = getattr(cls, '_instance', None)
@@ -45,22 +31,42 @@ class SingletonMetaclass(type):
         return cls._instance
 
 
-#
-# Types
-#
+class UndefinedType:
+    def __unicode__(self):
+        return 'Undefined'
+
+    __str__ = __unicode__
 
 
-class Null:
+class UndefinedSingleton(UndefinedType, metaclass=SingletonMetaclass):
+    def __repr__(self):
+        return 'Undefined'
+
+
+class NullType:
+    def __unicode__(self):
+        return 'Null'
+
     def __getattr__(self, attr):
         return self
 
-    def __call__(self, *args, **kwargs):
+    def __getitem__(self, key):
         return self
 
-
-class NullSingleton(Null, metaclass=SingletonMetaclass):
-    def __getattr__(self, attr):
+    def __call__(self):
         return self
 
-    def __call__(self, *args, **kwargs):
-        return self
+    __str__ = __unicode__
+
+
+class NullSingleton(NullType, metaclass=SingletonMetaclass):
+    def __repr__(self):
+        return 'Null'
+
+
+NoneType = type(None)
+RegexpType = type(re.compile(r''))
+
+
+Null = NullSingleton()
+Undefined = UndefinedSingleton()
