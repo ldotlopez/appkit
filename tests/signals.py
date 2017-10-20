@@ -22,7 +22,7 @@ import unittest
 from unittest import mock
 
 
-from appkit import signaler
+from appkit.blocks import signaler
 
 
 class TestSignaler(unittest.TestCase):

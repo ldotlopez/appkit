@@ -26,7 +26,7 @@ import tempfile
 import time
 
 
-from appkit import cache
+from appkit.blocks import cache
 
 
 class CacheTest:

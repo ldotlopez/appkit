@@ -21,7 +21,7 @@
 import unittest
 
 
-from appkit import extensionmanager
+from appkit.blocks import extensionmanager
 
 
 class PluginTypeA(extensionmanager.Extension):
