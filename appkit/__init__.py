@@ -18,18 +18,24 @@
 # USA.
 
 from .core import (
-    SingletonMetaclass,
+    ArgParseDictAction,
+    QueueIterable,
     NoneType,
-    RegexpType,
     Null,
+    SingletonMetaclass,
+    RegexpType,
     Undefined
 )
 
 
 __all__ = [
-    'SingletonMetaclass',
+    'ArgParseDictAction',
+    'QueueIterable',
     'NoneType',
-    'RegexpType',
     'Null',
+    'SingletonMetaclass',
+    'RegexpType',
     'Undefined'
 ]
+
+version = [0, 11, 90, 2017, 10, 20]

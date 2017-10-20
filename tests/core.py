@@ -21,18 +21,38 @@
 import unittest
 
 
+import argparse
 import re
 
 
 from appkit import (
+    ArgParseDictAction,
     NoneType,
     Null,
+    QueueIterable,
     RegexpType,
     SingletonMetaclass
 )
 
 
 class TestCoreTypes(unittest.TestCase):
+    def test_singleton(self):
+        class A(metaclass=SingletonMetaclass):
+            pass
+
+        self.assertTrue(A() is A())
+
+    def test_argparse_dict_action(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--kv', dest='dict', default={},
+                            action=ArgParseDictAction)
+        args = parser.parse_args('--kv a=1 --kv b=2'.split())
+        self.assertTrue(args.dict['a'] == '1')
+        self.assertTrue(args.dict['b'] == '2')
+
+    def test_none_type(self):
+        self.assertTrue(isinstance(None, NoneType))
+
     def test_null_singleton(self):
         n1 = Null()
         n2 = Null()
@@ -47,17 +67,22 @@ class TestCoreTypes(unittest.TestCase):
         n = Null()
         self.assertTrue(n is n['foo'] is n['foo']['bar'] is n[0] is Null)
 
-    def test_singleton(self):
-        class A(metaclass=SingletonMetaclass):
-            pass
+    def test_queue_iterable(self):
+        q = QueueIterable()
+        q.put(1)
+        q.put(2)
+        q.put(3)
 
-        self.assertTrue(A() is A())
+        res = []
+        for x in q:
+            res.append(x)
+
+        self.assertEqual(
+            res,
+            [1, 2, 3])
 
     def test_regexp_type(self):
         self.assertTrue(isinstance(re.compile('.*'), RegexpType))
-
-    def test_none_type(self):
-        self.assertTrue(isinstance(None, NoneType))
 
 
 if __name__ == '__main__':

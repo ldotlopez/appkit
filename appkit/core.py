@@ -18,7 +18,9 @@
 # USA.
 
 
+import argparse
 import re
+import queue
 
 
 class SingletonMetaclass(type):
@@ -31,16 +33,34 @@ class SingletonMetaclass(type):
         return cls._instance
 
 
-class UndefinedType:
-    def __unicode__(self):
-        return 'Undefined'
+class ArgParseDictAction(argparse.Action):
+    """
+    Convert a series of --foo key=value --foo key2=value2 into a dict like:
+    { key: value, key2: value}
+    """
 
-    __str__ = __unicode__
+    def __call__(self, parser, namespace, values, option_string=None):
+        dest = getattr(namespace, self.dest)
+        if dest is None:
+            dest = {}
+
+        parts = values.split('=')
+        key = parts[0]
+        value = ''.join(parts[1:])
+
+        dest[key] = value
+
+        setattr(namespace, self.dest, dest)
 
 
-class UndefinedSingleton(UndefinedType, metaclass=SingletonMetaclass):
-    def __repr__(self):
-        return 'Undefined'
+class QueueIterable(queue.Queue):
+    def __iter__(self):
+        while True:
+            try:
+                x = self.get_nowait()
+                yield x
+            except queue.Empty:
+                break
 
 
 class NullType:
@@ -62,6 +82,18 @@ class NullType:
 class NullSingleton(NullType, metaclass=SingletonMetaclass):
     def __repr__(self):
         return 'Null'
+
+
+class UndefinedType:
+    def __unicode__(self):
+        return 'Undefined'
+
+    __str__ = __unicode__
+
+
+class UndefinedSingleton(UndefinedType, metaclass=SingletonMetaclass):
+    def __repr__(self):
+        return 'Undefined'
 
 
 NoneType = type(None)

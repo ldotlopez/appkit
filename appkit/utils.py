@@ -18,13 +18,11 @@
 # USA.
 
 
-import argparse
 import configparser
 import datetime
 import enum
 import functools
 import os
-import queue
 import re
 import sys
 import time
@@ -41,26 +39,6 @@ def argument(*args, **kwargs):
         return args, kwargs
 
     return wrapped_arguments
-
-
-class DictAction(argparse.Action):
-    """
-    Convert a series of --foo key=value --foo key2=value2 into a dict like:
-    { key: value, key2: value}
-    """
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        dest = getattr(namespace, self.dest)
-        if dest is None:
-            dest = {}
-
-        parts = values.split('=')
-        key = parts[0]
-        value = ''.join(parts[1:])
-
-        dest[key] = value
-
-        setattr(namespace, self.dest, dest)
 
 
 #
@@ -303,16 +281,6 @@ def ichunks(it, size):
                 return
 
         yield ret
-
-
-class IterableQueue(queue.Queue):
-    def __iter__(self):
-        while True:
-            try:
-                x = self.get_nowait()
-                yield x
-            except queue.Empty:
-                break
 
 
 #
