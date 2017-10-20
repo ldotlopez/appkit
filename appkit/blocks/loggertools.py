@@ -40,6 +40,7 @@ _logLevel = None
 DEFAULT_HANDLER = None
 DEFAULT_FORMATTER = None
 DEFAULT_FORMAT = "[%(levelname)s] [%(name)s] %(message)s"
+DEFAULT_LEVEL = None
 
 
 class Level(enum.Enum):
@@ -62,6 +63,14 @@ class Level(enum.Enum):
         idx = l.index(val)
         new = min(len(l) - 1, idx + n)
         return l[new]
+
+    @classmethod
+    def ensure(cls, val):
+        for x in list(cls):
+            if x.value == val:
+                return x
+
+        raise ValueError(val)
 
 
 class DefaultHandler(logging.StreamHandler):
@@ -96,6 +105,9 @@ def setLevel(level):
     """
     global _loggers
     global _logLevel
+
+    if level not in Level:
+        raise ValueError(level)
 
     _logLevel = level
     for (name, logger) in _loggers.items():
@@ -154,6 +166,13 @@ def getLogger(key=None, level=None, format=DEFAULT_FORMAT,
     return _loggers[key]
 
 
+def clearLoggers():
+    global _loggers
+    _loggers = dict()
+
+
 _logLevel = Level.DEBUG
+
 DEFAULT_HANDLER = DefaultHandler
 DEFAULT_FORMATTER = DefaultFormatter
+DEFAULT_LEVEL = Level.DEBUG

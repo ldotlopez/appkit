@@ -20,19 +20,53 @@
 
 import unittest
 
-
-from appkit import loggertools
+# FIXME: Rename appkit.loggertools to appkit.blocks.easylogging
+from appkit import loggertools as el
 
 
 class TestLogging(unittest.TestCase):
-    def test_set_handler(self):
-        class FooHandler(loggertools.DefaultHandler):
-            pass
+    def setUp(self):
+        el.setLevel(el.DEFAULT_LEVEL)
+        el.clearLoggers()
 
-        loggertools.setHandler(FooHandler)
+    def test_level_incr_decr(self):
+        self.assertEqual(
+            el.Level.incr(el.Level.INFO),
+            el.Level.DEBUG)
 
-        logger = loggertools.getLogger('foo')
-        self.assertTrue(isinstance(logger.handlers[0], FooHandler))
+        self.assertEqual(
+            el.Level.decr(el.Level.DEBUG),
+            el.Level.INFO)
+
+        self.assertEqual(
+            el.Level.decr(el.Level.CRITICAL),
+            el.Level.CRITICAL)
+
+        self.assertEqual(
+            el.Level.incr(el.Level.DEBUG),
+            el.Level.DEBUG)
+
+    def test_get_loger(self):
+        l1 = el.getLogger()
+        l2 = el.getLogger()
+        self.assertTrue(l1 is l2)
+
+    def test_set_level(self):
+        el.setLevel(el.Level.INFO)
+        l1 = el.getLogger()
+        self.assertEqual(el.Level.ensure(l1.level), el.Level.INFO)
+
+        el.setLevel(el.Level.WARNING)
+        self.assertEqual(el.Level.ensure(l1.level), el.Level.WARNING)
+
+    # def test_set_handler(self):
+    #     class FooHandler(loggertools.DefaultHandler):
+    #         pass
+
+    #     loggertools.setHandler(FooHandler)
+
+    #     logger = loggertools.getLogger('foo')
+    #     self.assertTrue(isinstance(logger.handlers[0], FooHandler))
 
 
 if __name__ == '__main__':
