@@ -21,8 +21,13 @@
 import unittest
 
 
+import re
+
+
 from appkit import (
+    NoneType,
     Null,
+    RegexpType,
     SingletonMetaclass
 )
 
@@ -47,6 +52,12 @@ class TestCoreTypes(unittest.TestCase):
             pass
 
         self.assertTrue(A() is A())
+
+    def test_regexp_type(self):
+        self.assertTrue(isinstance(re.compile('.*'), RegexpType))
+
+    def test_none_type(self):
+        self.assertTrue(isinstance(None, NoneType))
 
 
 if __name__ == '__main__':
