@@ -18,6 +18,13 @@
 # USA.
 
 
+# Notes on terminology:
+# someplugin.py -> plugin (package)
+# SomeExtensionClass -> extension_point
+# SubClassImplementingSomeExtensionClass -> extension_class
+# instance of SubClassImplementingSomeExtensionType -> extension
+
+
 import inspect
 import importlib
 import re
@@ -43,12 +50,6 @@ class ExtensionManager:
         # DON'T uncomment the next line keep it as a reminder
         #
         # self.register_extension_point(Extension)
-
-    # Notes on terminology:
-    # someplugin.py -> plugin (package)
-    # SomeExtensionClass -> extension_point
-    # SubClassImplementingSomeExtensionClass -> extension_class
-    # instance of SubClassImplementingSomeExtensionType -> extension
 
     def load_plugin(self, plugin):
         fullplugin = self.__name__ + ".plugins." + plugin.replace('-', '_')
