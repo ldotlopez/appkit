@@ -56,13 +56,7 @@ class ExtensionManager:
         try:
             m = importlib.import_module(fullplugin)
         except ImportError as e:
-            msg = "Unable to load plugin {pluginname} ({module}): {message}"
-            msg = msg.format(
-                pluginname=plugin,
-                module=fullplugin,
-                message=str(e)
-            )
-            raise PluginNotLoadedError(msg)
+            raise PluginNotLoadedError(str(e)) from e
 
         try:
             extensions_attr = '__{}_extensions__'.format(self.__name__)
