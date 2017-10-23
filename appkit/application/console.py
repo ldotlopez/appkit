@@ -24,7 +24,7 @@ import functools
 import sys
 
 from appkit import application
-
+from appkit.blocks import extensionmanager
 
 SUBCOMMAND_ATTR = '_subcommand'
 SUBCOMMANDS_SEPARATOR = '_'
@@ -63,7 +63,7 @@ def shift_dict(d, shift_prefix=SUBCOMMAND_ATTR,
         d[newattr] = d.pop(oldattr)
 
 
-class ConsoleCommandExtension(application.Applet,  application.Extension):
+class ConsoleCommandExtension(application.Applet,  extensionmanager.Extension):
     def setup_parser(self, parser, command_path):
         # Insert command children
         if self.children:

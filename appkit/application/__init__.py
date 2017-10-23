@@ -33,14 +33,13 @@ import warnings
 
 
 __all__ = [
-    'App',
-    'Extension',
+    'Application',
     'Parameter',
     'ArgumentsError',
     'ConfigurationError',
-    'RequirementError',
     'ExtensionError',
-    'ExtensionNotFoundError'
+    'ExtensionNotFoundError',
+    'RequirementError'
 ]
 
 
@@ -64,7 +63,15 @@ class RequirementError(ExtensionError):
     pass
 
 
+class Extension(extensionmanager.Extension):
+    def __init__(self, shell, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.shell = shell
+
+
 class Application(extensionmanager.ExtensionManager):
+    DEFAULT_SETTINGS = {}
+
     def __init__(self,
                  name,
                  *args,
@@ -89,29 +96,35 @@ class Application(extensionmanager.ExtensionManager):
         self.settings = settings
         self.signals = signals
 
+        for (key, value) in self.DEFAULT_SETTINGS.items():
+            self.settings.set(key, value)
+
+    def get_extension(self, extension_point, name, *args, **kwargs):
+        return super().get_extension(extension_point, name, self.get_shell(),
+                                     *args, **kwargs)
+
+    @abc.abstractmethod
+    def get_shell(self):
+        raise NotImplementedError()
+
     @abc.abstractmethod
     def main(self, **params):
         raise NotImplementedError()
 
 
-class Extension(extensionmanager.Extension):
-    pass
-
-
-class Applet(Extension):
+class Applet(extensionmanager.Extension):
     HELP = ""
     CHILDREN = ()
     PARAMETERS = ()
 
-    def __init__(self, services=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.children = {}
         self.parent = None
 
         for (name, child_cls) in self.CHILDREN:
-            self.children[name] = self.create_child(
-                name, child_cls, services,
-                *args, **kwargs)
+            self.children[name] = self.create_child(name, child_cls, *args,
+                                                    **kwargs)
 
     def create_child(self, name, child_cls, *args, **kwargs):
         child = child_cls(*args, **kwargs)
