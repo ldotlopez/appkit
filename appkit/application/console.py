@@ -24,7 +24,11 @@ import functools
 import sys
 
 from appkit import application
-from appkit.blocks import extensionmanager
+from appkit.blocks import (
+    extensionmanager,
+    quicklogging
+)
+
 
 SUBCOMMAND_ATTR = '_subcommand'
 SUBCOMMANDS_SEPARATOR = '_'
@@ -167,11 +171,20 @@ class ConsoleApplicationMixin:
             cmd.setup_parser(cmd_parser, [name])
 
     def consume_application_parameters(self, parameters):
-        kwargs = {}
-        for name in 'verbose quiet config_files plugins'.split():
-            kwargs[name] = parameters.pop(name)
+        quiet = parameters.pop('quiet')
+        verbose = parameters.pop('verbose')
+        log_level = quicklogging.Level.WARNING + verbose - quiet
+        self.logger.setLevel(log_level.value)
 
-        self.parameters = self.__class__._Parameters(**kwargs)
+        plugins = parameters.pop('plugins')
+        for plugin in plugins:
+            self.load_plugin(plugin)
+
+        config_files = parameters.pop('config_files')
+
+        # FIXME: Change store API to allow loading files
+        # for cf in config_files:
+        #     self.settings.load(cf)
 
     def execute_from_args(self, args=None):
         if args is None:

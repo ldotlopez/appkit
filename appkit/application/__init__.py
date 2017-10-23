@@ -83,7 +83,7 @@ class Application(extensionmanager.ExtensionManager):
             warnings.warn('pluginpath is ignored')
 
         if logger is None:
-            logger = quicklogging.QuickLogger()
+            logger = quicklogging.QuickLogger(quicklogging.Level.DEBUG)
 
         if settings is None:
             settings = store.Store()
