@@ -32,32 +32,24 @@ SUBCOMMANDS_SEPARATOR = '_'
 assert SUBCOMMAND_ATTR.startswith(SUBCOMMANDS_SEPARATOR)
 
 
-def shift_namespace_keys(ns):
-    """
-    Utility function to rewrite arguparse.Namespace in order to pass it to
-    subcommands
-    """
-
-    if not hasattr(ns, SUBCOMMAND_ATTR):
-        msg = "Namespace has no {attr} attribute"
-        msg = msg.format(attr=SUBCOMMAND_ATTR)
-        raise ValueError(ns, msg)
-
-    # Get and delete sub_attr
-    sub_value = getattr(ns, SUBCOMMAND_ATTR)
-    delattr(ns, SUBCOMMAND_ATTR)
+def shift_dict(d, shift_prefix=SUBCOMMAND_ATTR,
+               separator=SUBCOMMANDS_SEPARATOR):
+    key = d.pop(shift_prefix, None)
+    if key is None:
+        return
 
     # Get all related attributes:
-    # - The inmediate _subcommand_x
-    # - Others like _subcommand_x_*
-    discr = SUBCOMMAND_ATTR + SUBCOMMANDS_SEPARATOR + sub_value
-    attrs = [attr for attr in vars(ns)
-             if (attr == discr or
-                 attr.startswith(discr + SUBCOMMANDS_SEPARATOR))]
+    # - The inmediate _KEY_x
+    # - Others like _subcommand_KEY_*
+    discriminator = shift_prefix + separator + key
+
+    attrs = [attr for attr in d
+             if (attr == discriminator or
+                 attr.startswith(discriminator + separator))]
 
     # Split those attrs into pieces and sort by the number of pieces
     attrs_and_parts = [
-        (attr, attr.split(SUBCOMMANDS_SEPARATOR))
+        (attr, attr.split(separator))
         for attr in attrs]
     attrs_and_parts = sorted(
         attrs_and_parts,
@@ -66,10 +58,9 @@ def shift_namespace_keys(ns):
     # Rewrite namespace moving attributes
     for (oldattr, parts) in attrs_and_parts:
         newattr = (
-            SUBCOMMAND_ATTR +
-            ''.join(SUBCOMMANDS_SEPARATOR + part for part in parts[3:]))
-        setattr(ns, newattr, getattr(ns, oldattr))
-        delattr(ns, oldattr)
+            shift_prefix +
+            ''.join(separator + part for part in parts[3:]))
+        d[newattr] = d.pop(oldattr)
 
 
 class ConsoleCommandExtension(application.Applet,  application.Extension):
@@ -95,28 +86,25 @@ class ConsoleCommandExtension(application.Applet,  application.Extension):
                 fn = functools.partial(fn, parameter.long_flag)
             fn(**parameter.kwargs)
 
-    def execute(self, arguments):
-        # If we haven't children, _subcommand mustn't be set
+    def execute(self, parameters):
+        # Do some checks
+        have_subcommand = SUBCOMMAND_ATTR in parameters
+        if have_subcommand:
+            subcommand = parameters[SUBCOMMAND_ATTR]
+            assert subcommand is not None
+            assert subcommand in self.children
+
         if not self.children:
-            assert not hasattr(arguments, SUBCOMMAND_ATTR)
+            assert have_subcommand is False
 
-        # however if we have children, _subcommand must be valid or None
+        # Check for execution code
+        if not self.children or not have_subcommand:
+            return self.main(**parameters)
+
         else:
-            subcommand = getattr(arguments, SUBCOMMAND_ATTR)
-            assert subcommand is None or subcommand in self.children
-
-        # If we have children and a valid _subcommand go deeper
-        if not self.children or arguments._subcommand is None:
-            return self.main(**vars(arguments))
-
-        # Run own's main
-        else:
-            # Strip _subcommand
-            subcommand = arguments._subcommand
-
-            # Replace sub args
-            shift_namespace_keys(arguments)
-            return self.children[subcommand].execute(arguments)
+            subcommand = parameters[SUBCOMMAND_ATTR]
+            shift_dict(parameters)
+            return self.children[subcommand].execute(parameters)
 
 
 class ConsoleApplicationMixin:
@@ -201,37 +189,29 @@ class ConsoleApplicationMixin:
     def execute(self, arguments):
         # Program flow:
         #
-        # Parse arguments
+        # Convert arguments to paramters (namespace -> dict)
         # Run App.consume_application_parameters()
         # App has subcommands?
-        # `-> No
-        #     Run App.main() with all command line arguments
         # `-> Yes
         #     Subcommand has been specified?
-        #     `-> No
-        #         Run App.main() with remaining parameters
         #     `-> Yes
         #         Run ConsoleCommandExtension.main() with remaining parameters
+        #     `-> No
+        #         Run App.main() with remaining parameters
+        # `-> No
+        #     Run App.main() with all command line arguments
 
-        params = vars(arguments)
-        self.consume_application_parameters(params)
+        parameters = vars(arguments)
+        self.consume_application_parameters(parameters)
 
-        cmds = self.get_commands()
+        cmds = dict(self.get_commands())
 
-        # def _run_main():
-        #     return self.main(**vars(arguments))
+        if not cmds:
+            return self.main(*+parameters)
 
-        # cmds = self.get_commands()
+        subcommand = parameters[SUBCOMMAND_ATTR]
+        shift_dict(parameters)
+        if not subcommand:
+            return self.main(**parameters)
 
-        # if not cmds:
-        #     return _run_main()
-
-        # subcommand = getattr(arguments, '_subcommand', None)
-        # if subcommand is None:
-        #     return _run_main()
-
-        # cmd = self.get_command(subcommand)
-        # self.consume_application_arguments(arguments)
-
-        # shift_namespace_keys(arguments)
-        # return cmd.execute(arguments)
+        return cmds[subcommand].execute(parameters)
