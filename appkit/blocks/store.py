@@ -20,8 +20,10 @@
 
 import copy
 import json
+import re
 
-UNDEFINED = object()
+
+import appkit
 
 
 class FormatError(Exception):
@@ -103,7 +105,7 @@ class Store:
             raise IllegalKeyError(key)
 
         parts = key.split('.')
-        if not all(parts):
+        if not all([re.match('^[a-z0-9\-]+$', x) for x in parts]):
             raise IllegalKeyError(key)
 
         return parts
@@ -171,7 +173,7 @@ class Store:
         v = self._process_value(key, value)
         d[subkey] = v
 
-    def get(self, key, default=UNDEFINED):
+    def get(self, key, default=appkit.Undefined):
         if key is None:
             return self._d
 
@@ -180,7 +182,7 @@ class Store:
             return copy.deepcopy(d[subkey])
 
         except (KeyNotFoundError, KeyError) as e:
-            if default != UNDEFINED:
+            if default != appkit.Undefined:
                 return copy.deepcopy(default)
             else:
                 raise KeyNotFoundError(key) from e

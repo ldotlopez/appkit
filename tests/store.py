@@ -208,6 +208,12 @@ class SelectorInterfaceTest(unittest.TestCase):
         with self.assertRaises(store.IllegalKeyError):
             s.set('x..a', 1)
 
+        with self.assertRaises(store.IllegalKeyError):
+            s.set('x.s p a c e.a', 1)
+
+        with self.assertRaises(store.IllegalKeyError):
+            s.set('x.$.a', 1)
+
     def test_dottet_value(self):
         s = store.Store()
         s.set('a.b', 'c.d')
