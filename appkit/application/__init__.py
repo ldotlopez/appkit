@@ -64,7 +64,7 @@ class RequirementError(ExtensionError):
     pass
 
 
-class App(extensionmanager.ExtensionManager):
+class Application(extensionmanager.ExtensionManager):
     def __init__(self,
                  name,
                  *args,

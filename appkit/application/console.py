@@ -119,7 +119,7 @@ class ConsoleCommandExtension(application.Applet,  application.Extension):
             return self.children[subcommand].execute(arguments)
 
 
-class ConsoleAppMixin:
+class ConsoleApplicationMixin:
     COMMAND_EXTENSION_POINT = ConsoleCommandExtension
 
     _Parameters = collections.namedtuple(
@@ -178,13 +178,12 @@ class ConsoleAppMixin:
 
             cmd.setup_parser(cmd_parser, [name])
 
-    def consume_application_arguments(self, arguments):
+    def consume_application_parameters(self, parameters):
         kwargs = {}
         for name in 'verbose quiet config_files plugins'.split():
-            kwargs[name] = getattr(arguments, name)
-            delattr(arguments, name)
+            kwargs[name] = parameters.pop(name)
 
-        self.params = self.__class__._Parameters(**kwargs)
+        self.parameters = self.__class__._Parameters(**kwargs)
 
     def execute_from_args(self, args=None):
         if args is None:
@@ -200,21 +199,39 @@ class ConsoleAppMixin:
         return self.execute(arguments)
 
     def execute(self, arguments):
-        def _run_main():
-            return self.main(**vars(arguments))
+        # Program flow:
+        #
+        # Parse arguments
+        # Run App.consume_application_parameters()
+        # App has subcommands?
+        # `-> No
+        #     Run App.main() with all command line arguments
+        # `-> Yes
+        #     Subcommand has been specified?
+        #     `-> No
+        #         Run App.main() with remaining parameters
+        #     `-> Yes
+        #         Run ConsoleCommandExtension.main() with remaining parameters
 
-        print(repr(arguments))
+        params = vars(arguments)
+        self.consume_application_parameters(params)
+
         cmds = self.get_commands()
 
-        if not cmds:
-            return _run_main()
+        # def _run_main():
+        #     return self.main(**vars(arguments))
 
-        subcommand = getattr(arguments, '_subcommand', None)
-        if subcommand is None:
-            return _run_main()
+        # cmds = self.get_commands()
 
-        cmd = self.get_command(subcommand)
-        self.consume_application_arguments(arguments)
+        # if not cmds:
+        #     return _run_main()
 
-        shift_namespace_keys(arguments)
-        return cmd.execute(arguments)
+        # subcommand = getattr(arguments, '_subcommand', None)
+        # if subcommand is None:
+        #     return _run_main()
+
+        # cmd = self.get_command(subcommand)
+        # self.consume_application_arguments(arguments)
+
+        # shift_namespace_keys(arguments)
+        # return cmd.execute(arguments)
