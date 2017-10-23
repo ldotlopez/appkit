@@ -1,5 +1,2 @@
-appdirs
-
-# aiohttp
-# sqlalchemy_helpers
-# sqlalchemy
+appdirs==1.4.3
+blinker==1.4

@@ -1,3 +1,12 @@
-# For color logging
-colorama
+# quicklogging color support
+colorama==0.3.9
 
+# httpclient
+aiohttp==2.3.1
+async-timeout==2.0.0
+chardet==3.0.4
+multidict==3.3.0
+yarl==0.13.0
+
+# db support
+sqlalchemy==1.1.14
