@@ -196,15 +196,15 @@ class DiskCache(BaseCache):
         return _now() - p.stat().st_ctime > self.delta
 
     def set(self, key, value):
-        filepath = pathlib.Path(self.encode_key(key))
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-        filepath.write_bytes(self.encode_value(value))
+        p = pathlib.Path(self.encode_key(key))
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(self.encode_value(value))
 
     def get(self, key):
-        on_disk = pathlib.Path(self.encode_key(key))
+        p = pathlib.Path(self.encode_key(key))
 
         try:
-            expired = self._path_is_expired(on_disk)
+            expired = self._path_is_expired(p)
 
         except (OSError, IOError) as e:
             raise CacheKeyMissError(key) from e
@@ -214,7 +214,7 @@ class DiskCache(BaseCache):
             raise CacheKeyExpiredError(key)
 
         try:
-            return self.decode_value(on_disk.read_bytes())
+            return self.decode_value(p.read_bytes())
 
         except EOFError as e:
             self.delete(key)
@@ -227,9 +227,9 @@ class DiskCache(BaseCache):
             raise CacheOSError() from e
 
     def delete(self, key):
-        filepath = self.encode_key(key)
+        p = pathlib.Path(self.encode_key(key))
         try:
-            filepath.unlink()
+            p.unlink()
 
         except FileNotFoundError:
             pass
