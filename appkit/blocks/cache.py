@@ -86,6 +86,15 @@ class BaseCache:
 
         self.delta = delta
 
+    def encode_key(self, key):
+        return key
+
+    def encode_value(self, value):
+        return value
+
+    def decode_value(self, value):
+        return value
+
     @abc.abstractmethod
     def get(self, key):
         raise NotImplementedError()
@@ -169,23 +178,30 @@ class DiskCache(BaseCache):
 
         self.basedir = pathlib.Path(self.basedir)
 
-    def _on_disk_path(self, key):
+    def encode_key(self, key):
         hashed = hashlib.sha1(key.encode('utf-8')).hexdigest()
         return self.basedir / hashed[0] / hashed[:2] / hashed
 
+    def encode_value(self, value):
+        return pickle.dumps(value)
+
+    def decode_value(self, value):
+        return pickle.loads(value)
+
     def _key_is_expired(self, key):
-        return self._file_is_expired(self._on_disk_path(key))
+        p = pathlib.Path(self.encode_key(key))
+        return self._path_is_expired(p)
 
     def _path_is_expired(self, p):
         return _now() - p.stat().st_ctime > self.delta
 
     def set(self, key, value):
-        filepath = self._on_disk_path(key)
+        filepath = pathlib.Path(self.encode_key(key))
         filepath.parent.mkdir(parents=True, exist_ok=True)
-        filepath.write_bytes(pickle.dumps(value))
+        filepath.write_bytes(self.encode_value(value))
 
     def get(self, key):
-        on_disk = self._on_disk_path(key)
+        on_disk = pathlib.Path(self.encode_key(key))
 
         try:
             expired = self._path_is_expired(on_disk)
@@ -198,7 +214,7 @@ class DiskCache(BaseCache):
             raise CacheKeyExpiredError(key)
 
         try:
-            return pickle.loads(on_disk.read_bytes())
+            return self.decode_value(on_disk.read_bytes())
 
         except EOFError as e:
             self.delete(key)
@@ -211,7 +227,7 @@ class DiskCache(BaseCache):
             raise CacheOSError() from e
 
     def delete(self, key):
-        filepath = self._on_disk_path(key)
+        filepath = self.encode_key(key)
         try:
             filepath.unlink()
 
