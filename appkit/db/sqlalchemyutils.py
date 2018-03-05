@@ -180,28 +180,28 @@ def get_or_create(session, model, **kwargs):
         return model(**kwargs), True
 
 
-def keyvaluemodel_for_session(name, session, tablename=None):
-    base = declarative.declarative_base()
-    base.metadata.bind = session.get_bind()
+# def keyvaluemodel_for_session(name, session, tablename=None):
+#     base = declarative.declarative_base()
+#     base.metadata.bind = session.get_bind()
 
-    return keyvaluemodel(name, base, tablename)
+#     return keyvaluemodel(name, base, tablename)
 
 
-def keyvaluemodel(name, base, extra_dict={}):
-    if not (isinstance(name, str) and name != ''):
-        raise TypeError('name must be a non-empty str')
+# def keyvaluemodel(name, base, extra_dict={}):
+#     if not (isinstance(name, str) and name != ''):
+#         raise TypeError('name must be a non-empty str')
 
-    class_dict = {
-        '__tablename__': name.lower()
-    }
-    class_dict.update(extra_dict)
+#     class_dict = {
+#         '__tablename__': name.lower()
+#     }
+#     class_dict.update(extra_dict)
 
-    newcls = type(
-        name,
-        (_KeyValueItem, base),
-        class_dict)
+#     newcls = type(
+#         name,
+#         (KeyValueItem, base),
+#         class_dict)
 
-    return newcls
+#     return newcls
 
 
 class KeyValueManager:
@@ -259,7 +259,7 @@ class KeyValueManager:
             self._query.filter(self._model.key.startswith(k+".")))
 
 
-class _KeyValueItem:
+class KeyValueItem:
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     key = sqlalchemy.Column(sqlalchemy.String, name='key', nullable=False)
     _value = sqlalchemy.Column(sqlalchemy.String, name='value')
