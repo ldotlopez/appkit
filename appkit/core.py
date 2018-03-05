@@ -73,7 +73,7 @@ class NullType:
     def __getitem__(self, key):
         return self
 
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
         return self
 
     __str__ = __unicode__

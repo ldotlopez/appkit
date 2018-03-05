@@ -18,7 +18,10 @@
 # USA.
 
 
-from appkit import utils
+from appkit import (
+    Undefined,
+    utils
+)
 
 
 import json
@@ -36,8 +39,6 @@ except ImportError:
     import warnings
     warnings.warn("sqlalchemy not available. Try `pip install sqlalchemy`.")
     raise
-
-_UNDEF = object()
 
 
 def _re_fn(regexp, other):
@@ -179,9 +180,6 @@ def get_or_create(session, model, **kwargs):
         return model(**kwargs), True
 
 
-
-
-
 def keyvaluemodel_for_session(name, session, tablename=None):
     base = declarative.declarative_base()
     base.metadata.bind = session.get_bind()
@@ -225,11 +223,11 @@ class KeyValueManager:
     def _query(self):
         return self._sess.query(self._model)
 
-    def get(self, k, default=_UNDEF):
+    def get(self, k, default=Undefined):
         try:
             item = self._query.filter(self._model.key == k).one()
         except exc.NoResultFound:
-            if default is _UNDEF:
+            if default is Undefined:
                 raise KeyError(k)
             else:
                 return default
@@ -265,24 +263,22 @@ class _KeyValueItem:
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     key = sqlalchemy.Column(sqlalchemy.String, name='key', nullable=False)
     _value = sqlalchemy.Column(sqlalchemy.String, name='value')
-    _typ = sqlalchemy.Column(sqlalchemy.String, name='type', default='str',
-                             nullable=False)
+    _type = sqlalchemy.Column(sqlalchemy.String, name='type', default='str',
+                              nullable=False)
 
-    _resolved = _UNDEF
+    _resolved = Undefined
 
-    def __init__(self, key, value, typ=None):
-        self.key = key
-        self._typ, self._value = self._native_to_internal(value)
-        if typ:
-            self._typ = typ
+    def __init__(self, key, value, type=None):
+        type, value = self._native_to_internal(value)
+        super().__init__(key=key, _value=value, _type=type)
 
     @property
     def value(self):
-        return self._interal_to_native(self._typ, self._value)
+        return self._interal_to_native(self._type, self._value)
 
     @value.setter
     def value(self, v):
-        self._typ, self._value = self._native_to_internal(v)
+        self._type, self._value = self._native_to_internal(v)
 
     @staticmethod
     def _native_to_internal(value):
@@ -332,7 +328,10 @@ class _KeyValueItem:
         elif typ == 'pickle':
             return pickle.loads(value)
 
-        raise ValueError((typ, value))
+        else:
+            raise TypeError(typ)
+
+        raise ValueError((type, value))
 
     def __repr__(self):
         return "<{classname} {key}={value}>".format(

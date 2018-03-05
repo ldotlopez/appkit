@@ -173,6 +173,7 @@ class ConsoleApplicationMixin:
     def consume_application_parameters(self, parameters):
         quiet = parameters.pop('quiet')
         verbose = parameters.pop('verbose')
+
         log_level = quicklogging.Level.WARNING + verbose - quiet
         self.logger.setLevel(log_level.value)
 

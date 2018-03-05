@@ -105,6 +105,13 @@ class QuickLogger(logging.Logger):
         handler.setFormatter(formatter_class(format))
         self.addHandler(handler)
 
+    def getChild(self, *args, **kwargs):
+        child = super().getChild(*args, **kwargs)
+        for handler in self.handlers:
+            child.addHandler(handler)
+
+        return child
+
     # def setLevel(self, level):
     #     if level in Level:
     #         level = level.value
