@@ -182,10 +182,9 @@ class ConsoleApplicationMixin:
             self.load_plugin(plugin)
 
         config_files = parameters.pop('config_files')
-
-        # FIXME: Change store API to allow loading files
-        # for cf in config_files:
-        #     self.settings.load(cf)
+        for cf in config_files:
+            with open(cf, 'r', encoding='utf-8') as fh:
+                self.settings.load(fh)
 
     def execute_from_args(self, args=None):
         if args is None:
