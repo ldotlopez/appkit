@@ -82,7 +82,7 @@ class TypeValidator:
         if k in self.type_map:
             try:
                 return self.type_map[k](v)
-            except:
+            except Exception:
                 pass
 
             raise ValidationError(k, v, 'Incompatible type')
