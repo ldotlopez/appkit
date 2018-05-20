@@ -112,7 +112,7 @@ class Store:
 
         return parts
 
-    def _process_value(self, key, value):
+    def validate_value_for_key(self, key, value):
         for vfunc in self._validators:
             value = vfunc(key, value)
 
@@ -172,7 +172,7 @@ class Store:
 
     def set(self, key, value):
         subkey, d = self._get_subdict(key, create=True)
-        v = self._process_value(key, value)
+        v = self.validate_value_for_key(key, value)
         d[subkey] = v
 
     def get(self, key, default=appkit.Undefined):
