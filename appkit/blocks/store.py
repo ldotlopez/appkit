@@ -102,15 +102,23 @@ class Store:
 
         self.update(items)
 
-    def _process_key(self, key):
+    def process_key(self, key):
         if not isinstance(key, str):
             raise IllegalKeyError(key)
 
         parts = key.split(self._separator)
-        if not all([re.match('^[a-z0-9\-]+$', x) for x in parts]):
-            raise IllegalKeyError(key)
+        parts = [self.validate_key(x) for x in parts]
 
         return parts
+
+    def validate_key(self, key):
+        if not isinstance(key, str):
+            raise IllegalKeyError(key)
+
+        if not re.match('^[a-z0-9\-]+$', key, re.IGNORECASE):
+            raise IllegalKeyError(key)
+
+        return key
 
     def validate_value_for_key(self, key, value):
         for vfunc in self._validators:
@@ -121,7 +129,7 @@ class Store:
     def _get_subdict(self, key, create=False):
         d = self._d
 
-        parts = self._process_key(key)
+        parts = self.process_key(key)
         for idx, p in enumerate(parts[:-1]):
             if p not in d and create:
                 d[p] = {}
