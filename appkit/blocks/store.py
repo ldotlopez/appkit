@@ -57,7 +57,7 @@ class ValidationError(Exception):
     __str__ = __unicode__
 
 
-def flatten_dict(d):
+def flatten_dict(d, separator):
     if not isinstance(d, dict):
         raise TypeError()
 
@@ -65,8 +65,9 @@ def flatten_dict(d):
 
     for (k, v) in d.items():
         if isinstance(v, dict):
-            subret = flatten_dict(v)
-            subret = {k + '.' + subk: subv for (subk, subv) in subret.items()}
+            subret = flatten_dict(v, separator)
+            subret = {k + separator + subk: subv
+                      for (subk, subv) in subret.items()}
             ret.update(subret)
         else:
             ret[k] = v
@@ -91,9 +92,10 @@ class TypeValidator:
 
 
 class Store:
-    def __init__(self, items={}, validators=[]):
+    def __init__(self, items={}, validators=[], separator='.'):
         self._d = {}
         self._validators = []
+        self._separator = separator
 
         for validator in validators:
             self.add_validator(validator)
@@ -104,7 +106,7 @@ class Store:
         if not isinstance(key, str):
             raise IllegalKeyError(key)
 
-        parts = key.split('.')
+        parts = key.split(self._separator)
         if not all([re.match('^[a-z0-9\-]+$', x) for x in parts]):
             raise IllegalKeyError(key)
 
@@ -131,7 +133,7 @@ class Store:
                 d[p] = {}
 
             if p not in d:
-                raise KeyNotFoundError('.'.join(parts[:idx]))
+                raise KeyNotFoundError(self._separator.join(parts[:idx]))
 
             d = d[p]
 
@@ -145,7 +147,7 @@ class Store:
         self.update(data)
 
     def update(self, data):
-        for (k, v) in flatten_dict(data).items():
+        for (k, v) in flatten_dict(data, self._separator).items():
             self.set(k, v)
 
     def dump(self, stream):
@@ -154,7 +156,7 @@ class Store:
 
     def load(self, stream):
         try:
-            data = flatten_dict(json.loads(stream.read()))
+            data = flatten_dict(json.loads(stream.read()), self._separator)
         except json.decoder.JSONDecodeError as e:
             raise FormatError() from e
 
@@ -185,7 +187,9 @@ class Store:
             if default != appkit.Undefined:
                 return copy.deepcopy(default)
             else:
-                raise KeyNotFoundError(key) from e
+                pass  # Mask real exception
+
+        raise KeyNotFoundError(key)
 
     def delete(self, key):
         subkey, d = self._get_subdict(key)
@@ -204,11 +208,13 @@ class Store:
         subkey, d = self._get_subdict(key)
         try:
             return list(d[subkey].keys())
-        except KeyError:
-            raise KeyNotFoundError(key)
+        except KeyError as e:
+            pass  # Mask real exception
+
+        raise KeyNotFoundError(key)
 
     def all_keys(self):
-        return flatten_dict(self._d)
+        return flatten_dict(self._d, self._separator)
 
     def has_key(self, key):
         try:
